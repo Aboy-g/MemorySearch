@@ -21,15 +21,31 @@ public:
     Mem(const Mem &) = delete;
     Mem &operator=(const Mem &) = delete;
 
-    // 移动
-    Mem(Mem &&other) noexcept;
-    Mem &operator=(Mem &&other) noexcept;
+    Mem::Mem(Mem &&other) noexcept
+        : MemBase(other), mem_fd(other.mem_fd)
+    {
+        other.set_pid(-1);
+        other.mem_fd = -1;
+    }
+
+    Mem &Mem::operator=(Mem &&other) noexcept
+    {
+        if (this != &other)
+        {
+            close_mem();
+            set_pid(other.get_pid());
+            mem_fd = other.mem_fd;
+            other.set_pid(-1);
+            other.mem_fd = -1;
+        }
+        return *this;
+    }
 
     // 原始字节读写，返回是否成功
     bool read(uintptr_t address, void *buffer, size_t size) override;
     bool write(uintptr_t address, const void *buffer, size_t size) override;
 
-    bool write_assembly(uintptr_t address,const std::vector<std::string>& instructions);
+    bool write_assembly(uintptr_t address, const std::vector<std::string> &instructions);
 
     uintptr_t get_module_base(const char *module_name) const override;
     uintptr_t get_module_end(const char *module_name) const override;
