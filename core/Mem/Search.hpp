@@ -223,8 +223,8 @@ public:
         {
             if (!map.isValid())
                 continue;
-            uint32_t mapMask = static_cast<uint32_t>(map.getMemType());
-            if (params.memTypeMask != 0 && (mapMask & params.memTypeMask) == 0)
+            uint32_t mapMask = map.getMemType();
+            if (params.memTypeMask != MemType::RANGE_ALL && (mapMask & params.memTypeMask) == 0)
                 continue;
 
             uintptr_t start = std::max(static_cast<uintptr_t>(map.startAddress), params.startAddress);
