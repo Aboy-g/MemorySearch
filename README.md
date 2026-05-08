@@ -192,6 +192,56 @@ vec[idx - 1].value = newVal;
 
     results.writeOffset(0x8,9999);
 ```
+使用例子
+
+```c++
+#include "../core/Mem/Mem.hpp"
+#include <iostream>
+#include "../core/Mem/Search.hpp"
+
+int main()
+{
+    uintptr_t address;
+    int pid;
+    std::cout << "请输入目标进程 PID: ";
+    std::cin >> pid;
+    std::cin.ignore(); // 忽略换行符
+    std::cout << "请输入要写入的地址 (16 进制): ";
+    std::cin >> std::hex >> address;
+    Mem mem(pid);
+
+    std::vector<std::string> instructions = {
+       "ADD	 W9, W9, #0x1"
+    };
+    mem.write_assembly(address, instructions);
+
+    // 313,153,600A;-1,275,068,293A;98A;0A
+    Mem mem(pid);
+    Search search(mem);
+    Search::SearchParams params;
+    params.memTypeMask = MemType::RANGE_C_ALLOC;
+    auto results = search.find<int>(params, 313153600);
+    std::cout << "找到 " << results.size() << " 个结果:" << std::endl;
+    std::cout << "改善" << std::endl;
+    results.filterSelf([&mem](const auto &res)
+    { 
+        return mem.Read<int>(res.address + 4) == -1275068293;
+    }).filterSelf([&mem](const auto &res)
+    {
+        return mem.Read<int>(res.address + 12) == 0;
+    });
+
+    std::cout << "过滤后剩余 " << results.size() << " 个结果:" << std::endl;
+    for (const auto &res : results.results())
+    {
+        std::cout << "地址: 0x" << std::hex << res.address
+                  << " 值: " << std::dec << res.value << std::endl;
+    }
+
+    results.writeOffset(0x8,9999);
+    return 0;
+}
+```
 
 详细例子 查看 main.cpp
 
