@@ -1,9 +1,0 @@
-{
-	"InstallScripts" : 
-	[
-		"D:/C++\u9879\u76ee/MemorySearch/out/build/ndk-arm64/cmake_install.cmake",
-		"D:/C++\u9879\u76ee/MemorySearch/out/build/ndk-arm64/core/cmake_install.cmake",
-		"D:/C++\u9879\u76ee/MemorySearch/out/build/ndk-arm64/test/cmake_install.cmake"
-	],
-	"Parallel" : false
-}
