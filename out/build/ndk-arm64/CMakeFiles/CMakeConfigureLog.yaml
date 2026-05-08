@@ -1,0 +1,405 @@
+
+---
+events:
+  -
+    kind: "message-v1"
+    backtrace:
+      - "D:/Cmake/share/cmake-4.0/Modules/CMakeDetermineSystem.cmake:200 (message)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      The target system is: Android - 1 - aarch64
+      The host system is: Windows - 10.0.26200 - AMD64
+  -
+    kind: "message-v1"
+    backtrace:
+      - "D:/Cmake/share/cmake-4.0/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "D:/Cmake/share/cmake-4.0/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "D:/Cmake/share/cmake-4.0/Modules/CMakeDetermineCCompiler.cmake:123 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Compiling the C compiler identification source file "CMakeCCompilerId.c" succeeded.
+      Compiler: D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/bin/clang.exe 
+      Build flags: -g;-DANDROID;-fdata-sections;-ffunction-sections;-funwind-tables;-fstack-protector-strong;-no-canonical-prefixes;-D_FORTIFY_SOURCE=2;-Wformat;-Werror=format-security
+      Id flags: -c;--target=aarch64-none-linux-android29 
+      
+      The output was:
+      0
+      
+      
+      Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "CMakeCCompilerId.o"
+      
+      The C compiler identification is Clang, found in:
+        D:/C++项目/MemorySearch/out/build/ndk-arm64/CMakeFiles/4.0.3/CompilerIdC/CMakeCCompilerId.o
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "D:/Cmake/share/cmake-4.0/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "D:/Cmake/share/cmake-4.0/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "D:/Cmake/share/cmake-4.0/Modules/CMakeDetermineCXXCompiler.cmake:126 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" succeeded.
+      Compiler: D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/bin/clang++.exe 
+      Build flags: -g;-DANDROID;-fdata-sections;-ffunction-sections;-funwind-tables;-fstack-protector-strong;-no-canonical-prefixes;-D_FORTIFY_SOURCE=2;-Wformat;-Werror=format-security
+      Id flags: -c;--target=aarch64-none-linux-android29 
+      
+      The output was:
+      0
+      
+      
+      Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "CMakeCXXCompilerId.o"
+      
+      The CXX compiler identification is Clang, found in:
+        D:/C++项目/MemorySearch/out/build/ndk-arm64/CMakeFiles/4.0.3/CompilerIdCXX/CMakeCXXCompilerId.o
+      
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "D:/Cmake/share/cmake-4.0/Modules/CMakeDetermineCompilerABI.cmake:83 (try_compile)"
+      - "D:/Cmake/share/cmake-4.0/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    checks:
+      - "Detecting C compiler ABI info"
+    directories:
+      source: "D:/C++\u9879\u76ee/MemorySearch/out/build/ndk-arm64/CMakeFiles/CMakeScratch/TryCompile-dlhyr1"
+      binary: "D:/C++\u9879\u76ee/MemorySearch/out/build/ndk-arm64/CMakeFiles/CMakeScratch/TryCompile-dlhyr1"
+    cmakeVariables:
+      ANDROID_ABI: "arm64-v8a"
+      ANDROID_ARM_MODE: "thumb"
+      ANDROID_PIE: "TRUE"
+      ANDROID_PLATFORM: "android-29"
+      ANDROID_STL: "c++_static"
+      ANDROID_TOOLCHAIN: "clang"
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/bin/clang-scan-deps.exe"
+      CMAKE_CXX_COMPILER_TARGET: "aarch64-none-linux-android29"
+      CMAKE_C_COMPILER_TARGET: "aarch64-none-linux-android29"
+      CMAKE_C_FLAGS: "-g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat "
+      CMAKE_C_FLAGS_DEBUG: "-fno-limit-debug-info "
+      CMAKE_EXE_LINKER_FLAGS: "-static-libstdc++ -Wl,--build-id=sha1 -Wl,--no-rosegment -Wl,--no-undefined-version -Wl,--fatal-warnings -Wl,--no-undefined -Qunused-arguments  "
+      CMAKE_POSITION_INDEPENDENT_CODE: "TRUE"
+      CMAKE_SYSROOT: "D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot"
+    buildResult:
+      variable: "CMAKE_C_ABI_COMPILED"
+      cached: true
+      stdout: |
+        Change Dir: 'D:/C++项目/MemorySearch/out/build/ndk-arm64/CMakeFiles/CMakeScratch/TryCompile-dlhyr1'
+        
+        Run Build Command(s): D:/ninja-win/ninja.exe -v cmTC_78399
+        [1/2] D:\\NDK\\android-ndk-r28b\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=aarch64-none-linux-android29 --sysroot=D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot   -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat   -fPIE   -v -MD -MT CMakeFiles/cmTC_78399.dir/CMakeCCompilerABI.c.o -MF CMakeFiles\\cmTC_78399.dir\\CMakeCCompilerABI.c.o.d -o CMakeFiles/cmTC_78399.dir/CMakeCCompilerABI.c.o -c D:/Cmake/share/cmake-4.0/Modules/CMakeCCompilerABI.c
+        Android (13324770, based on r530567d) clang version 19.0.0 (https://android.googlesource.com/toolchain/llvm-project 97a699bf4812a18fb657c2779f5296a4ab2694d2)
+        Target: aarch64-none-linux-android29
+        Thread model: posix
+        InstalledDir: D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/bin
+         (in-process)
+         "D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/bin/clang.exe" -cc1 -triple aarch64-none-linux-android29 -emit-obj -mrelax-all -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCCompilerABI.c -mrelocation-model pic -pic-level 2 -pic-is-pie -mframe-pointer=non-leaf -ffp-contract=on -fno-rounding-math -mconstructor-aliases -funwind-tables=2 -target-cpu generic -target-feature +v8a -target-feature +fp-armv8 -target-feature +neon -target-feature +fix-cortex-a53-835769 -target-abi aapcs -debug-info-kind=constructor -dwarf-version=4 -debugger-tuning=gdb -fdebug-compilation-dir=D:/C++椤圭洰/MemorySearch/out/build/ndk-arm64/CMakeFiles/CMakeScratch/TryCompile-dlhyr1 -v -ffunction-sections -fdata-sections -fcoverage-compilation-dir=D:/C++椤圭洰/MemorySearch/out/build/ndk-arm64/CMakeFiles/CMakeScratch/TryCompile-dlhyr1 -resource-dir D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/lib/clang/19 -dependency-file "CMakeFiles\\\\cmTC_78399.dir\\\\CMakeCCompilerABI.c.o.d" -MT CMakeFiles/cmTC_78399.dir/CMakeCCompilerABI.c.o -sys-header-deps -D ANDROID -D _FORTIFY_SOURCE=2 -isysroot D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot -internal-isystem D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/lib/clang/19/include -internal-isystem D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/local/include -internal-externc-isystem D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/include/aarch64-linux-android -internal-externc-isystem D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/include -internal-externc-isystem D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/include -Wformat -ferror-limit 19 -stack-protector 2 -fno-signed-char -fgnuc-version=4.2.1 -fskip-odr-check-in-gmf -target-feature +outline-atomics -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_78399.dir/CMakeCCompilerABI.c.o -x c D:/Cmake/share/cmake-4.0/Modules/CMakeCCompilerABI.c
+        clang -cc1 version 19.0.0 based upon LLVM 19.0.0 default target x86_64-w64-windows-gnu
+        ignoring nonexistent directory "D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/local/include"
+        ignoring nonexistent directory "D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/include"
+        #include "..." search starts here:
+        #include <...> search starts here:
+         D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/lib/clang/19/include
+         D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/include/aarch64-linux-android
+         D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/include
+        End of search list.
+        [2/2] C:\\WINDOWS\\system32\\cmd.exe /C "cd . && D:\\NDK\\android-ndk-r28b\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=aarch64-none-linux-android29 --sysroot=D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -static-libstdc++ -Wl,--build-id=sha1 -Wl,--no-rosegment -Wl,--no-undefined-version -Wl,--fatal-warnings -Wl,--no-undefined -Qunused-arguments   -v CMakeFiles/cmTC_78399.dir/CMakeCCompilerABI.c.o -o cmTC_78399   && cd ."
+        Android (13324770, based on r530567d) clang version 19.0.0 (https://android.googlesource.com/toolchain/llvm-project 97a699bf4812a18fb657c2779f5296a4ab2694d2)
+        Target: aarch64-none-linux-android29
+        Thread model: posix
+        InstalledDir: D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/bin
+         "D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/bin/ld.lld" --sysroot=D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot -EL --fix-cortex-a53-843419 -z now -z relro -z max-page-size=16384 --hash-style=gnu --eh-frame-hdr -m aarch64linux -pie -dynamic-linker /system/bin/linker64 -o cmTC_78399 D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib/aarch64-linux-android/29/crtbegin_dynamic.o -LD:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/lib/clang/19/lib/linux/aarch64 -LD:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib/aarch64-linux-android/29 -LD:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib/aarch64-linux-android -LD:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib --build-id=sha1 --no-rosegment --no-undefined-version --fatal-warnings --no-undefined CMakeFiles/cmTC_78399.dir/CMakeCCompilerABI.c.o D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/lib/clang/19/lib/linux/libclang_rt.builtins-aarch64-android.a -l:libunwind.a -ldl -lc D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/lib/clang/19/lib/linux/libclang_rt.builtins-aarch64-android.a -l:libunwind.a -ldl D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib/aarch64-linux-android/29/crtend_android.o
+        
+      exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "D:/Cmake/share/cmake-4.0/Modules/CMakeDetermineCompilerABI.cmake:191 (message)"
+      - "D:/Cmake/share/cmake-4.0/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Parsed C implicit include dir info: rv=done
+        found start of include info
+        found start of implicit include info
+          add: [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/lib/clang/19/include]
+          add: [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/include/aarch64-linux-android]
+          add: [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/include]
+        end of search list found
+        collapse include dir [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/lib/clang/19/include] ==> [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/lib/clang/19/include]
+        collapse include dir [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/include/aarch64-linux-android] ==> [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/include/aarch64-linux-android]
+        collapse include dir [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/include] ==> [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/include]
+        implicit include dirs: [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/lib/clang/19/include;D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/include/aarch64-linux-android;D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/include]
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "D:/Cmake/share/cmake-4.0/Modules/CMakeDetermineCompilerABI.cmake:227 (message)"
+      - "D:/Cmake/share/cmake-4.0/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Parsed C implicit link information:
+        link line regex: [^( *|.*[/\\])(ld[0-9]*(|\\.[a-rt-z][a-z]*|\\.s[a-np-z][a-z]*|\\.so[a-z]+)|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        linker tool regex: [^[ 	]*(->|")?[ 	]*(([^"]*[/\\])?(ld[0-9]*(|\\.[a-rt-z][a-z]*|\\.s[a-np-z][a-z]*|\\.so[a-z]+)))("|,| |$)]
+        ignore line: [Change Dir: 'D:/C++项目/MemorySearch/out/build/ndk-arm64/CMakeFiles/CMakeScratch/TryCompile-dlhyr1']
+        ignore line: []
+        ignore line: [Run Build Command(s): D:/ninja-win/ninja.exe -v cmTC_78399]
+        ignore line: [[1/2] D:\\NDK\\android-ndk-r28b\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=aarch64-none-linux-android29 --sysroot=D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot   -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat   -fPIE   -v -MD -MT CMakeFiles/cmTC_78399.dir/CMakeCCompilerABI.c.o -MF CMakeFiles\\cmTC_78399.dir\\CMakeCCompilerABI.c.o.d -o CMakeFiles/cmTC_78399.dir/CMakeCCompilerABI.c.o -c D:/Cmake/share/cmake-4.0/Modules/CMakeCCompilerABI.c]
+        ignore line: [Android (13324770  based on r530567d) clang version 19.0.0 (https://android.googlesource.com/toolchain/llvm-project 97a699bf4812a18fb657c2779f5296a4ab2694d2)]
+        ignore line: [Target: aarch64-none-linux-android29]
+        ignore line: [Thread model: posix]
+        ignore line: [InstalledDir: D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/bin]
+        ignore line: [ (in-process)]
+        ignore line: [ "D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/bin/clang.exe" -cc1 -triple aarch64-none-linux-android29 -emit-obj -mrelax-all -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCCompilerABI.c -mrelocation-model pic -pic-level 2 -pic-is-pie -mframe-pointer=non-leaf -ffp-contract=on -fno-rounding-math -mconstructor-aliases -funwind-tables=2 -target-cpu generic -target-feature +v8a -target-feature +fp-armv8 -target-feature +neon -target-feature +fix-cortex-a53-835769 -target-abi aapcs -debug-info-kind=constructor -dwarf-version=4 -debugger-tuning=gdb -fdebug-compilation-dir=D:/C++椤圭洰/MemorySearch/out/build/ndk-arm64/CMakeFiles/CMakeScratch/TryCompile-dlhyr1 -v -ffunction-sections -fdata-sections -fcoverage-compilation-dir=D:/C++椤圭洰/MemorySearch/out/build/ndk-arm64/CMakeFiles/CMakeScratch/TryCompile-dlhyr1 -resource-dir D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/lib/clang/19 -dependency-file "CMakeFiles\\\\cmTC_78399.dir\\\\CMakeCCompilerABI.c.o.d" -MT CMakeFiles/cmTC_78399.dir/CMakeCCompilerABI.c.o -sys-header-deps -D ANDROID -D _FORTIFY_SOURCE=2 -isysroot D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot -internal-isystem D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/lib/clang/19/include -internal-isystem D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/local/include -internal-externc-isystem D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/include/aarch64-linux-android -internal-externc-isystem D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/include -internal-externc-isystem D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/include -Wformat -ferror-limit 19 -stack-protector 2 -fno-signed-char -fgnuc-version=4.2.1 -fskip-odr-check-in-gmf -target-feature +outline-atomics -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_78399.dir/CMakeCCompilerABI.c.o -x c D:/Cmake/share/cmake-4.0/Modules/CMakeCCompilerABI.c]
+        ignore line: [clang -cc1 version 19.0.0 based upon LLVM 19.0.0 default target x86_64-w64-windows-gnu]
+        ignore line: [ignoring nonexistent directory "D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/local/include"]
+        ignore line: [ignoring nonexistent directory "D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/include"]
+        ignore line: [#include "..." search starts here:]
+        ignore line: [#include <...> search starts here:]
+        ignore line: [ D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/lib/clang/19/include]
+        ignore line: [ D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/include/aarch64-linux-android]
+        ignore line: [ D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/include]
+        ignore line: [End of search list.]
+        ignore line: [[2/2] C:\\WINDOWS\\system32\\cmd.exe /C "cd . && D:\\NDK\\android-ndk-r28b\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=aarch64-none-linux-android29 --sysroot=D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -static-libstdc++ -Wl --build-id=sha1 -Wl --no-rosegment -Wl --no-undefined-version -Wl --fatal-warnings -Wl --no-undefined -Qunused-arguments   -v CMakeFiles/cmTC_78399.dir/CMakeCCompilerABI.c.o -o cmTC_78399   && cd ."]
+        ignore line: [Android (13324770  based on r530567d) clang version 19.0.0 (https://android.googlesource.com/toolchain/llvm-project 97a699bf4812a18fb657c2779f5296a4ab2694d2)]
+        ignore line: [Target: aarch64-none-linux-android29]
+        ignore line: [Thread model: posix]
+        ignore line: [InstalledDir: D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/bin]
+        link line: [ "D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/bin/ld.lld" --sysroot=D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot -EL --fix-cortex-a53-843419 -z now -z relro -z max-page-size=16384 --hash-style=gnu --eh-frame-hdr -m aarch64linux -pie -dynamic-linker /system/bin/linker64 -o cmTC_78399 D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib/aarch64-linux-android/29/crtbegin_dynamic.o -LD:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/lib/clang/19/lib/linux/aarch64 -LD:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib/aarch64-linux-android/29 -LD:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib/aarch64-linux-android -LD:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib --build-id=sha1 --no-rosegment --no-undefined-version --fatal-warnings --no-undefined CMakeFiles/cmTC_78399.dir/CMakeCCompilerABI.c.o D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/lib/clang/19/lib/linux/libclang_rt.builtins-aarch64-android.a -l:libunwind.a -ldl -lc D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/lib/clang/19/lib/linux/libclang_rt.builtins-aarch64-android.a -l:libunwind.a -ldl D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib/aarch64-linux-android/29/crtend_android.o]
+          arg [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/bin/ld.lld] ==> ignore
+          arg [--sysroot=D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot] ==> ignore
+          arg [-EL] ==> ignore
+          arg [--fix-cortex-a53-843419] ==> ignore
+          arg [-znow] ==> ignore
+          arg [-zrelro] ==> ignore
+          arg [-zmax-page-size=16384] ==> ignore
+          arg [--hash-style=gnu] ==> ignore
+          arg [--eh-frame-hdr] ==> ignore
+          arg [-m] ==> ignore
+          arg [aarch64linux] ==> ignore
+          arg [-pie] ==> ignore
+          arg [-dynamic-linker] ==> ignore
+          arg [/system/bin/linker64] ==> ignore
+          arg [-o] ==> ignore
+          arg [cmTC_78399] ==> ignore
+          arg [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib/aarch64-linux-android/29/crtbegin_dynamic.o] ==> obj [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib/aarch64-linux-android/29/crtbegin_dynamic.o]
+          arg [-LD:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/lib/clang/19/lib/linux/aarch64] ==> dir [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/lib/clang/19/lib/linux/aarch64]
+          arg [-LD:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib/aarch64-linux-android/29] ==> dir [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib/aarch64-linux-android/29]
+          arg [-LD:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib/aarch64-linux-android] ==> dir [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib/aarch64-linux-android]
+          arg [-LD:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib] ==> dir [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib]
+          arg [--build-id=sha1] ==> ignore
+          arg [--no-rosegment] ==> ignore
+          arg [--no-undefined-version] ==> ignore
+          arg [--fatal-warnings] ==> ignore
+          arg [--no-undefined] ==> ignore
+          arg [CMakeFiles/cmTC_78399.dir/CMakeCCompilerABI.c.o] ==> ignore
+          arg [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/lib/clang/19/lib/linux/libclang_rt.builtins-aarch64-android.a] ==> lib [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/lib/clang/19/lib/linux/libclang_rt.builtins-aarch64-android.a]
+          arg [-l:libunwind.a] ==> lib [-l:libunwind.a]
+          arg [-ldl] ==> lib [dl]
+          arg [-lc] ==> lib [c]
+          arg [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/lib/clang/19/lib/linux/libclang_rt.builtins-aarch64-android.a] ==> lib [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/lib/clang/19/lib/linux/libclang_rt.builtins-aarch64-android.a]
+          arg [-l:libunwind.a] ==> lib [-l:libunwind.a]
+          arg [-ldl] ==> lib [dl]
+          arg [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib/aarch64-linux-android/29/crtend_android.o] ==> obj [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib/aarch64-linux-android/29/crtend_android.o]
+        linker tool for 'C': D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/bin/ld.lld
+        remove lib [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/lib/clang/19/lib/linux/libclang_rt.builtins-aarch64-android.a]
+        remove lib [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/lib/clang/19/lib/linux/libclang_rt.builtins-aarch64-android.a]
+        collapse library dir [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/lib/clang/19/lib/linux/aarch64] ==> [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/lib/clang/19/lib/linux/aarch64]
+        collapse library dir [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib/aarch64-linux-android/29] ==> [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib/aarch64-linux-android/29]
+        collapse library dir [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib/aarch64-linux-android] ==> [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib/aarch64-linux-android]
+        collapse library dir [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib] ==> [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib]
+        implicit libs: [-l:libunwind.a;dl;c;-l:libunwind.a;dl]
+        implicit objs: [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib/aarch64-linux-android/29/crtbegin_dynamic.o;D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib/aarch64-linux-android/29/crtend_android.o]
+        implicit dirs: [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/lib/clang/19/lib/linux/aarch64;D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib/aarch64-linux-android/29;D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib/aarch64-linux-android;D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib]
+        implicit fwks: []
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "D:/Cmake/share/cmake-4.0/Modules/Internal/CMakeDetermineLinkerId.cmake:36 (message)"
+      - "D:/Cmake/share/cmake-4.0/Modules/CMakeDetermineCompilerABI.cmake:270 (cmake_determine_linker_id)"
+      - "D:/Cmake/share/cmake-4.0/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Running the C compiler's linker: "D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/bin/ld.lld" "-v"
+      LLD 19.0.0 (compatible with GNU linkers)
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "D:/Cmake/share/cmake-4.0/Modules/CMakeDetermineCompilerABI.cmake:83 (try_compile)"
+      - "D:/Cmake/share/cmake-4.0/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    checks:
+      - "Detecting CXX compiler ABI info"
+    directories:
+      source: "D:/C++\u9879\u76ee/MemorySearch/out/build/ndk-arm64/CMakeFiles/CMakeScratch/TryCompile-he4qho"
+      binary: "D:/C++\u9879\u76ee/MemorySearch/out/build/ndk-arm64/CMakeFiles/CMakeScratch/TryCompile-he4qho"
+    cmakeVariables:
+      ANDROID_ABI: "arm64-v8a"
+      ANDROID_ARM_MODE: "thumb"
+      ANDROID_PIE: "TRUE"
+      ANDROID_PLATFORM: "android-29"
+      ANDROID_STL: "c++_static"
+      ANDROID_TOOLCHAIN: "clang"
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/bin/clang-scan-deps.exe"
+      CMAKE_CXX_COMPILER_TARGET: "aarch64-none-linux-android29"
+      CMAKE_CXX_FLAGS: "-g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat  "
+      CMAKE_CXX_FLAGS_DEBUG: "-fno-limit-debug-info "
+      CMAKE_CXX_SCAN_FOR_MODULES: "OFF"
+      CMAKE_C_COMPILER_TARGET: "aarch64-none-linux-android29"
+      CMAKE_EXE_LINKER_FLAGS: "-static-libstdc++ -Wl,--build-id=sha1 -Wl,--no-rosegment -Wl,--no-undefined-version -Wl,--fatal-warnings -Wl,--no-undefined -Qunused-arguments  "
+      CMAKE_POSITION_INDEPENDENT_CODE: "TRUE"
+      CMAKE_SYSROOT: "D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot"
+    buildResult:
+      variable: "CMAKE_CXX_ABI_COMPILED"
+      cached: true
+      stdout: |
+        Change Dir: 'D:/C++项目/MemorySearch/out/build/ndk-arm64/CMakeFiles/CMakeScratch/TryCompile-he4qho'
+        
+        Run Build Command(s): D:/ninja-win/ninja.exe -v cmTC_19ef3
+        [1/2] D:\\NDK\\android-ndk-r28b\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang++.exe --target=aarch64-none-linux-android29 --sysroot=D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot   -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat    -fPIE   -v -MD -MT CMakeFiles/cmTC_19ef3.dir/CMakeCXXCompilerABI.cpp.o -MF CMakeFiles\\cmTC_19ef3.dir\\CMakeCXXCompilerABI.cpp.o.d -o CMakeFiles/cmTC_19ef3.dir/CMakeCXXCompilerABI.cpp.o -c D:/Cmake/share/cmake-4.0/Modules/CMakeCXXCompilerABI.cpp
+        Android (13324770, based on r530567d) clang version 19.0.0 (https://android.googlesource.com/toolchain/llvm-project 97a699bf4812a18fb657c2779f5296a4ab2694d2)
+        Target: aarch64-none-linux-android29
+        Thread model: posix
+        InstalledDir: D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/bin
+         (in-process)
+         "D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/bin/clang++.exe" -cc1 -triple aarch64-none-linux-android29 -emit-obj -mrelax-all -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCXXCompilerABI.cpp -mrelocation-model pic -pic-level 2 -pic-is-pie -mframe-pointer=non-leaf -ffp-contract=on -fno-rounding-math -mconstructor-aliases -funwind-tables=2 -target-cpu generic -target-feature +v8a -target-feature +fp-armv8 -target-feature +neon -target-feature +fix-cortex-a53-835769 -target-abi aapcs -debug-info-kind=constructor -dwarf-version=4 -debugger-tuning=gdb -fdebug-compilation-dir=D:/C++椤圭洰/MemorySearch/out/build/ndk-arm64/CMakeFiles/CMakeScratch/TryCompile-he4qho -v -ffunction-sections -fdata-sections -fcoverage-compilation-dir=D:/C++椤圭洰/MemorySearch/out/build/ndk-arm64/CMakeFiles/CMakeScratch/TryCompile-he4qho -resource-dir D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/lib/clang/19 -dependency-file "CMakeFiles\\\\cmTC_19ef3.dir\\\\CMakeCXXCompilerABI.cpp.o.d" -MT CMakeFiles/cmTC_19ef3.dir/CMakeCXXCompilerABI.cpp.o -sys-header-deps -D ANDROID -D _FORTIFY_SOURCE=2 -isysroot D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot -internal-isystem D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/include/c++/v1 -internal-isystem D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/lib/clang/19/include -internal-isystem D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/local/include -internal-externc-isystem D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/include/aarch64-linux-android -internal-externc-isystem D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/include -internal-externc-isystem D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/include -Wformat -fdeprecated-macro -ferror-limit 19 -stack-protector 2 -fno-signed-char -fgnuc-version=4.2.1 -fskip-odr-check-in-gmf -fcxx-exceptions -fexceptions -target-feature +outline-atomics -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_19ef3.dir/CMakeCXXCompilerABI.cpp.o -x c++ D:/Cmake/share/cmake-4.0/Modules/CMakeCXXCompilerABI.cpp
+        clang -cc1 version 19.0.0 based upon LLVM 19.0.0 default target x86_64-w64-windows-gnu
+        ignoring nonexistent directory "D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/local/include"
+        ignoring nonexistent directory "D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/include"
+        #include "..." search starts here:
+        #include <...> search starts here:
+         D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/include/c++/v1
+         D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/lib/clang/19/include
+         D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/include/aarch64-linux-android
+         D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/include
+        End of search list.
+        [2/2] C:\\WINDOWS\\system32\\cmd.exe /C "cd . && D:\\NDK\\android-ndk-r28b\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang++.exe --target=aarch64-none-linux-android29 --sysroot=D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -static-libstdc++ -Wl,--build-id=sha1 -Wl,--no-rosegment -Wl,--no-undefined-version -Wl,--fatal-warnings -Wl,--no-undefined -Qunused-arguments   -v CMakeFiles/cmTC_19ef3.dir/CMakeCXXCompilerABI.cpp.o -o cmTC_19ef3   && cd ."
+        Android (13324770, based on r530567d) clang version 19.0.0 (https://android.googlesource.com/toolchain/llvm-project 97a699bf4812a18fb657c2779f5296a4ab2694d2)
+        Target: aarch64-none-linux-android29
+        Thread model: posix
+        InstalledDir: D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/bin
+         "D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/bin/ld.lld" --sysroot=D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot -EL --fix-cortex-a53-843419 -z now -z relro -z max-page-size=16384 --hash-style=gnu --eh-frame-hdr -m aarch64linux -pie -dynamic-linker /system/bin/linker64 -o cmTC_19ef3 D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib/aarch64-linux-android/29/crtbegin_dynamic.o -LD:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/lib/clang/19/lib/linux/aarch64 -LD:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib/aarch64-linux-android/29 -LD:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib/aarch64-linux-android -LD:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib --build-id=sha1 --no-rosegment --no-undefined-version --fatal-warnings --no-undefined CMakeFiles/cmTC_19ef3.dir/CMakeCXXCompilerABI.cpp.o -Bstatic -lc++ -Bdynamic -lm D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/lib/clang/19/lib/linux/libclang_rt.builtins-aarch64-android.a -l:libunwind.a -ldl -lc D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/lib/clang/19/lib/linux/libclang_rt.builtins-aarch64-android.a -l:libunwind.a -ldl D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib/aarch64-linux-android/29/crtend_android.o
+        
+      exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "D:/Cmake/share/cmake-4.0/Modules/CMakeDetermineCompilerABI.cmake:191 (message)"
+      - "D:/Cmake/share/cmake-4.0/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Parsed CXX implicit include dir info: rv=done
+        found start of include info
+        found start of implicit include info
+          add: [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/include/c++/v1]
+          add: [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/lib/clang/19/include]
+          add: [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/include/aarch64-linux-android]
+          add: [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/include]
+        end of search list found
+        collapse include dir [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/include/c++/v1] ==> [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/include/c++/v1]
+        collapse include dir [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/lib/clang/19/include] ==> [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/lib/clang/19/include]
+        collapse include dir [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/include/aarch64-linux-android] ==> [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/include/aarch64-linux-android]
+        collapse include dir [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/include] ==> [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/include]
+        implicit include dirs: [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/include/c++/v1;D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/lib/clang/19/include;D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/include/aarch64-linux-android;D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/include]
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "D:/Cmake/share/cmake-4.0/Modules/CMakeDetermineCompilerABI.cmake:227 (message)"
+      - "D:/Cmake/share/cmake-4.0/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Parsed CXX implicit link information:
+        link line regex: [^( *|.*[/\\])(ld[0-9]*(|\\.[a-rt-z][a-z]*|\\.s[a-np-z][a-z]*|\\.so[a-z]+)|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        linker tool regex: [^[ 	]*(->|")?[ 	]*(([^"]*[/\\])?(ld[0-9]*(|\\.[a-rt-z][a-z]*|\\.s[a-np-z][a-z]*|\\.so[a-z]+)))("|,| |$)]
+        ignore line: [Change Dir: 'D:/C++项目/MemorySearch/out/build/ndk-arm64/CMakeFiles/CMakeScratch/TryCompile-he4qho']
+        ignore line: []
+        ignore line: [Run Build Command(s): D:/ninja-win/ninja.exe -v cmTC_19ef3]
+        ignore line: [[1/2] D:\\NDK\\android-ndk-r28b\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang++.exe --target=aarch64-none-linux-android29 --sysroot=D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot   -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat    -fPIE   -v -MD -MT CMakeFiles/cmTC_19ef3.dir/CMakeCXXCompilerABI.cpp.o -MF CMakeFiles\\cmTC_19ef3.dir\\CMakeCXXCompilerABI.cpp.o.d -o CMakeFiles/cmTC_19ef3.dir/CMakeCXXCompilerABI.cpp.o -c D:/Cmake/share/cmake-4.0/Modules/CMakeCXXCompilerABI.cpp]
+        ignore line: [Android (13324770  based on r530567d) clang version 19.0.0 (https://android.googlesource.com/toolchain/llvm-project 97a699bf4812a18fb657c2779f5296a4ab2694d2)]
+        ignore line: [Target: aarch64-none-linux-android29]
+        ignore line: [Thread model: posix]
+        ignore line: [InstalledDir: D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/bin]
+        ignore line: [ (in-process)]
+        ignore line: [ "D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/bin/clang++.exe" -cc1 -triple aarch64-none-linux-android29 -emit-obj -mrelax-all -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCXXCompilerABI.cpp -mrelocation-model pic -pic-level 2 -pic-is-pie -mframe-pointer=non-leaf -ffp-contract=on -fno-rounding-math -mconstructor-aliases -funwind-tables=2 -target-cpu generic -target-feature +v8a -target-feature +fp-armv8 -target-feature +neon -target-feature +fix-cortex-a53-835769 -target-abi aapcs -debug-info-kind=constructor -dwarf-version=4 -debugger-tuning=gdb -fdebug-compilation-dir=D:/C++椤圭洰/MemorySearch/out/build/ndk-arm64/CMakeFiles/CMakeScratch/TryCompile-he4qho -v -ffunction-sections -fdata-sections -fcoverage-compilation-dir=D:/C++椤圭洰/MemorySearch/out/build/ndk-arm64/CMakeFiles/CMakeScratch/TryCompile-he4qho -resource-dir D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/lib/clang/19 -dependency-file "CMakeFiles\\\\cmTC_19ef3.dir\\\\CMakeCXXCompilerABI.cpp.o.d" -MT CMakeFiles/cmTC_19ef3.dir/CMakeCXXCompilerABI.cpp.o -sys-header-deps -D ANDROID -D _FORTIFY_SOURCE=2 -isysroot D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot -internal-isystem D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/include/c++/v1 -internal-isystem D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/lib/clang/19/include -internal-isystem D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/local/include -internal-externc-isystem D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/include/aarch64-linux-android -internal-externc-isystem D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/include -internal-externc-isystem D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/include -Wformat -fdeprecated-macro -ferror-limit 19 -stack-protector 2 -fno-signed-char -fgnuc-version=4.2.1 -fskip-odr-check-in-gmf -fcxx-exceptions -fexceptions -target-feature +outline-atomics -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_19ef3.dir/CMakeCXXCompilerABI.cpp.o -x c++ D:/Cmake/share/cmake-4.0/Modules/CMakeCXXCompilerABI.cpp]
+        ignore line: [clang -cc1 version 19.0.0 based upon LLVM 19.0.0 default target x86_64-w64-windows-gnu]
+        ignore line: [ignoring nonexistent directory "D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/local/include"]
+        ignore line: [ignoring nonexistent directory "D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/include"]
+        ignore line: [#include "..." search starts here:]
+        ignore line: [#include <...> search starts here:]
+        ignore line: [ D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/include/c++/v1]
+        ignore line: [ D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/lib/clang/19/include]
+        ignore line: [ D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/include/aarch64-linux-android]
+        ignore line: [ D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/include]
+        ignore line: [End of search list.]
+        ignore line: [[2/2] C:\\WINDOWS\\system32\\cmd.exe /C "cd . && D:\\NDK\\android-ndk-r28b\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang++.exe --target=aarch64-none-linux-android29 --sysroot=D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -static-libstdc++ -Wl --build-id=sha1 -Wl --no-rosegment -Wl --no-undefined-version -Wl --fatal-warnings -Wl --no-undefined -Qunused-arguments   -v CMakeFiles/cmTC_19ef3.dir/CMakeCXXCompilerABI.cpp.o -o cmTC_19ef3   && cd ."]
+        ignore line: [Android (13324770  based on r530567d) clang version 19.0.0 (https://android.googlesource.com/toolchain/llvm-project 97a699bf4812a18fb657c2779f5296a4ab2694d2)]
+        ignore line: [Target: aarch64-none-linux-android29]
+        ignore line: [Thread model: posix]
+        ignore line: [InstalledDir: D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/bin]
+        link line: [ "D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/bin/ld.lld" --sysroot=D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot -EL --fix-cortex-a53-843419 -z now -z relro -z max-page-size=16384 --hash-style=gnu --eh-frame-hdr -m aarch64linux -pie -dynamic-linker /system/bin/linker64 -o cmTC_19ef3 D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib/aarch64-linux-android/29/crtbegin_dynamic.o -LD:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/lib/clang/19/lib/linux/aarch64 -LD:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib/aarch64-linux-android/29 -LD:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib/aarch64-linux-android -LD:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib --build-id=sha1 --no-rosegment --no-undefined-version --fatal-warnings --no-undefined CMakeFiles/cmTC_19ef3.dir/CMakeCXXCompilerABI.cpp.o -Bstatic -lc++ -Bdynamic -lm D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/lib/clang/19/lib/linux/libclang_rt.builtins-aarch64-android.a -l:libunwind.a -ldl -lc D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/lib/clang/19/lib/linux/libclang_rt.builtins-aarch64-android.a -l:libunwind.a -ldl D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib/aarch64-linux-android/29/crtend_android.o]
+          arg [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/bin/ld.lld] ==> ignore
+          arg [--sysroot=D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot] ==> ignore
+          arg [-EL] ==> ignore
+          arg [--fix-cortex-a53-843419] ==> ignore
+          arg [-znow] ==> ignore
+          arg [-zrelro] ==> ignore
+          arg [-zmax-page-size=16384] ==> ignore
+          arg [--hash-style=gnu] ==> ignore
+          arg [--eh-frame-hdr] ==> ignore
+          arg [-m] ==> ignore
+          arg [aarch64linux] ==> ignore
+          arg [-pie] ==> ignore
+          arg [-dynamic-linker] ==> ignore
+          arg [/system/bin/linker64] ==> ignore
+          arg [-o] ==> ignore
+          arg [cmTC_19ef3] ==> ignore
+          arg [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib/aarch64-linux-android/29/crtbegin_dynamic.o] ==> obj [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib/aarch64-linux-android/29/crtbegin_dynamic.o]
+          arg [-LD:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/lib/clang/19/lib/linux/aarch64] ==> dir [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/lib/clang/19/lib/linux/aarch64]
+          arg [-LD:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib/aarch64-linux-android/29] ==> dir [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib/aarch64-linux-android/29]
+          arg [-LD:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib/aarch64-linux-android] ==> dir [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib/aarch64-linux-android]
+          arg [-LD:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib] ==> dir [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib]
+          arg [--build-id=sha1] ==> ignore
+          arg [--no-rosegment] ==> ignore
+          arg [--no-undefined-version] ==> ignore
+          arg [--fatal-warnings] ==> ignore
+          arg [--no-undefined] ==> ignore
+          arg [CMakeFiles/cmTC_19ef3.dir/CMakeCXXCompilerABI.cpp.o] ==> ignore
+          arg [-Bstatic] ==> search static
+          arg [-lc++] ==> lib [c++]
+          arg [-Bdynamic] ==> search dynamic
+          arg [-lm] ==> lib [m]
+          arg [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/lib/clang/19/lib/linux/libclang_rt.builtins-aarch64-android.a] ==> lib [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/lib/clang/19/lib/linux/libclang_rt.builtins-aarch64-android.a]
+          arg [-l:libunwind.a] ==> lib [-l:libunwind.a]
+          arg [-ldl] ==> lib [dl]
+          arg [-lc] ==> lib [c]
+          arg [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/lib/clang/19/lib/linux/libclang_rt.builtins-aarch64-android.a] ==> lib [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/lib/clang/19/lib/linux/libclang_rt.builtins-aarch64-android.a]
+          arg [-l:libunwind.a] ==> lib [-l:libunwind.a]
+          arg [-ldl] ==> lib [dl]
+          arg [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib/aarch64-linux-android/29/crtend_android.o] ==> obj [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib/aarch64-linux-android/29/crtend_android.o]
+        linker tool for 'CXX': D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/bin/ld.lld
+        remove lib [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/lib/clang/19/lib/linux/libclang_rt.builtins-aarch64-android.a]
+        remove lib [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/lib/clang/19/lib/linux/libclang_rt.builtins-aarch64-android.a]
+        collapse library dir [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/lib/clang/19/lib/linux/aarch64] ==> [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/lib/clang/19/lib/linux/aarch64]
+        collapse library dir [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib/aarch64-linux-android/29] ==> [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib/aarch64-linux-android/29]
+        collapse library dir [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib/aarch64-linux-android] ==> [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib/aarch64-linux-android]
+        collapse library dir [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib] ==> [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib]
+        implicit libs: [c++;m;-l:libunwind.a;dl;c;-l:libunwind.a;dl]
+        implicit objs: [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib/aarch64-linux-android/29/crtbegin_dynamic.o;D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib/aarch64-linux-android/29/crtend_android.o]
+        implicit dirs: [D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/lib/clang/19/lib/linux/aarch64;D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib/aarch64-linux-android/29;D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib/aarch64-linux-android;D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/lib]
+        implicit fwks: []
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "D:/Cmake/share/cmake-4.0/Modules/Internal/CMakeDetermineLinkerId.cmake:36 (message)"
+      - "D:/Cmake/share/cmake-4.0/Modules/CMakeDetermineCompilerABI.cmake:270 (cmake_determine_linker_id)"
+      - "D:/Cmake/share/cmake-4.0/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Running the CXX compiler's linker: "D:/NDK/android-ndk-r28b/toolchains/llvm/prebuilt/windows-x86_64/bin/ld.lld" "-v"
+      LLD 19.0.0 (compatible with GNU linkers)
+...
