@@ -21,14 +21,14 @@ public:
     Mem(const Mem &) = delete;
     Mem &operator=(const Mem &) = delete;
 
-    Mem::Mem(Mem &&other) noexcept
+    Mem(Mem &&other) noexcept
         : MemBase(other), mem_fd(other.mem_fd)
     {
         other.set_pid(-1);
         other.mem_fd = -1;
     }
 
-    Mem &Mem::operator=(Mem &&other) noexcept
+    Mem &operator=(Mem &&other) noexcept
     {
         if (this != &other)
         {

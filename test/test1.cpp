@@ -66,5 +66,35 @@ int main()
     {
         std::cout << "找到模式地址: 0x" << std::hex << addr << std::endl;
     }
+    bool is_w = false;
+    std::cout << "是否写入新值？(y/n): ";
+    char choice;
+    std::cin >> choice;
+    if (choice == 'y' || choice == 'Y')    {
+        is_w = true;
+    }
+    std::string newValue;
+    if (is_w) {
+        std::cout << "输入汇编指令（以 ';' 分隔）: ";
+        std::cin.ignore(); // 忽略之前输入的换行符
+        std::getline(std::cin, newValue);
+        std::vector<std::string> instructions;
+        size_t pos = 0; 
+        while ((pos = newValue.find(';')) != std::string::npos) {
+            std::string instr = newValue.substr(0, pos);
+            instructions.push_back(instr);
+            newValue.erase(0, pos + 1);
+        }
+        instructions.push_back(newValue); // 添加最后一个指令
+
+        for (const auto &instr : instructions) {
+            std::cout << "指令: " << instr << std::endl;
+        }
+        for (const auto &addr : results)
+        {
+            mem.write_assembly(addr, instructions);
+            std::cout << "已写入新指令到地址: 0x" << std::hex << addr << std::endl;
+        }
+    }
     return 0;
 }
