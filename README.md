@@ -165,6 +165,34 @@ vec[idx - 1].value = newVal;
   currentResults.writeOffset(0x24,12345);
 ```
 
+### 5. 数值特征码搜索
+
+```c++
+   Mem mem(pid);
+    Search search(mem);
+    Search::SearchParams params;
+    params.memTypeMask = MemType::RANGE_C_ALLOC;
+    auto results = search.find<int>(params, 313153600);
+    std::cout << "找到 " << results.size() << " 个结果:" << std::endl;
+    std::cout << "改善" << std::endl;
+    results.filterSelf([&mem](const auto &res)
+    { 
+        return mem.Read<int>(res.address + 4) == -1275068293;
+    }).filterSelf([&mem](const auto &res)
+    {
+        return mem.Read<int>(res.address + 12) == 0;
+    });
+
+    std::cout << "过滤后剩余 " << results.size() << " 个结果:" << std::endl;
+    for (const auto &res : results.results())
+    {
+        std::cout << "地址: 0x" << std::hex << res.address
+                  << " 值: " << std::dec << res.value << std::endl;
+    }
+
+    results.writeOffset(0x8,9999);
+```
+
 详细例子 查看 main.cpp
 
 ```
