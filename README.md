@@ -166,3 +166,76 @@ vec[idx - 1].value = newVal;
 ```
 
 详细例子 查看 main.cpp
+
+```
+D:\C++项目\MemorySearch>adb shell "su -c 'chmod 777 /data/local/tmp/MemorySearch && /data/local/tmp/MemorySearch'" 
+输入进程名或 PID 25113
+
+可用命令:
+  search <type> <value>      首次搜索 (type: int, float)
+  refine <type> <value>      在结果中再次搜索 (仅 int)
+  list [N]                   显示前 N 个结果
+  modify <index> <newvalue>  修改指定索引的结果
+  modifyall <newvalue>       修改所有结果
+  write                      将修改写回进程
+  refresh                    从进程重新读取值
+  pattern <hex>              特征码扫描, 如 "12 ?? 34"
+  utf8 <string>              搜索 UTF-8 字符串
+  utf16 <string>             搜索 UTF-16 字符串
+  dump <addr> [size]         dump 内存
+  clear                      清空当前结果集
+  demo                       运行综合演示
+  help                       显示本帮助
+  exit                       退出
+
+> demo
+
+========== Search 综合演示 ==========
+
+1. 搜索 int 值 123456 (全内存, 对齐):
+   找到 11 个结果
+   前5个: 0xab3d773c 0x7d8d20ad70 0x7de4e4c510 0x7de78e65fc 0x7e7b18b7b4 
+
+2. 自定义条件搜索 float 在 [3.14, 3.16] 内:
+   找到 369 个结果
+   0xa8a08980 = 3.15252
+   0xa8f58eac = 3.14055
+   0xa8f58eb4 = 3.14522
+
+3. UTF-8 字符串搜索 "Hello" (区分大小写, 含 '\0'):
+   找到 2 个地址
+   0x7de71d1645
+   0x7decd6ce4c
+
+4. UTF-16 字符串搜索 u"World" (小端序, 含空终止符):
+   找到 2 个地址
+   0x7d95f20c66
+   0x7da1520c66
+
+5. 特征码扫描 "90 90 90 90" (NOP 滑动):
+   找到 487 个地址
+   0x7d7cb26896
+   0x7d7cb26897
+   0x7d7cb26898
+   0x7d7cb26899
+   0x7d7cb2689a
+
+6. 带通配符 "12 ?? 34":
+   找到 5935 个地址
+   0x42b082f5
+   0x42b084ad
+   0xa8afdd84
+   0xa8edf1e2
+   0xa8ee9a22
+
+7. 异步扫描 "?? ?? ?? ??" 最多返回 3 个:
+   找到 0x4200000
+   找到 0x4200001
+   找到 0x4200002
+   异步扫描完成，共找到 3 个地址
+
+========== 演示结束 ==========
+
+> 
+
+```
