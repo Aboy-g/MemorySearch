@@ -47,9 +47,6 @@ public:
 
     bool write_assembly(uintptr_t address, const std::vector<std::string> &instructions);
 
-    uintptr_t get_module_base(const char *module_name) const override;
-    uintptr_t get_module_end(const char *module_name) const override;
-
 private:
     int mem_fd = -1;
 

@@ -181,8 +181,6 @@ std::vector<uintptr_t> Search::findStringUTF16SingleThread(const SearchParams &p
     return findPatternSingleThread(params, pattern, mask);
 }
 
-// ======================= 公共接口（支持并行/串行切换） =======================
-
 std::vector<uintptr_t> Search::findPattern(const SearchParams &params,
                                            const std::vector<uint8_t> &pattern,
                                            const std::vector<uint8_t> &mask)
@@ -221,6 +219,8 @@ std::vector<uintptr_t> Search::findPattern(const SearchParams &params,
     };
     return parallelScan(params, checker);
 }
+
+
 
 std::vector<uintptr_t> Search::scanPattern(const SearchParams &params,
                                            const std::string &patternStr)

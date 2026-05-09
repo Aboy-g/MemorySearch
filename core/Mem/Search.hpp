@@ -21,7 +21,7 @@ public:
         uintptr_t endAddress = UINTPTR_MAX;
         uint32_t memTypeMask = MemType::RANGE_ALL;
         bool align = true;
-        bool parallel = false;        // 是否启用多线程
+        bool parallel = true;        // 是否启用多线程
         unsigned int numThreads = 0;  // 线程数（0=自动检测）
     };
 
@@ -159,6 +159,11 @@ public:
             return addrs;
         }
 
+        Result& operator[](size_t offset)
+        {
+            return m_results[offset];
+        }
+
     private:
         MemBase &m_mem;
         std::vector<Result> m_results;
@@ -227,7 +232,7 @@ private:
     template <typename CheckFunc>
     std::vector<uintptr_t> parallelScan(const SearchParams &params, CheckFunc &&checker) const;
 
-    // ---------- 单线程版本的内部实现（保留原有逻辑） ----------
+    // ---------- 单线程版本的内部实现
     std::vector<uintptr_t> findPatternSingleThread(const SearchParams &params,
                                                    const std::vector<uint8_t> &pattern,
                                                    const std::vector<uint8_t> &mask);

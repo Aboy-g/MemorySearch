@@ -2,6 +2,7 @@
 #define MEMBASE_HPP
 
 #include <cstdint>
+#include "ProcMap.hpp"
 class MemBase
 {
 public:
@@ -29,8 +30,9 @@ public:
         return write(address, &value, sizeof(T));
     }
 
-    virtual uintptr_t get_module_base(const char *module_name) const = 0;
-    virtual uintptr_t get_module_end(const char *module_name) const = 0;
+    virtual uintptr_t get_module_base(const char *module_name) const;
+    virtual uintptr_t get_module_end(const char *module_name) const;
+    virtual ProcMap get_address_map(uintptr_t address) const ;
 
 protected:
     int pid = -1;

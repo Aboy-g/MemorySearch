@@ -3,7 +3,6 @@
 #include <unistd.h>
 #include <sys/uio.h>
 #include <sys/syscall.h>
-#include <cstdio>
 #include <cerrno>
 #include "..\Keystone\includes\keystone.h"
 Mem::Mem()
@@ -99,57 +98,6 @@ bool Mem::read_sys(uintptr_t address, void *buffer, size_t size)
 bool Mem::write_sys(uintptr_t address, const void *buffer, size_t size)
 {
     return pvm(reinterpret_cast<void *>(address), const_cast<void *>(buffer), size, true);
-}
-
-uintptr_t Mem::get_module_base(const char *module_name) const
-{
-    FILE *fp;
-    uintptr_t addr = 0;
-    char filename[32], buffer[1024];
-    snprintf(filename, sizeof(filename), "/proc/%d/maps", pid);
-    fp = fopen(filename, "rt");
-    if (fp != nullptr)
-    {
-        while (fgets(buffer, sizeof(buffer), fp))
-        {
-            if (strstr(buffer, module_name))
-            {
-#if defined(__LP64__)
-                sscanf(buffer, "%lx-%*s", &addr);
-#else
-                sscanf(buffer, "%x-%*s", &addr);
-#endif
-                break;
-            }
-        }
-        fclose(fp);
-    }
-    return addr;
-}
-
-uintptr_t Mem::get_module_end(const char *module_name) const
-{
-    FILE *fp;
-    uintptr_t temp = 0, addr = 0;
-    char filename[32], buffer[1024];
-    snprintf(filename, sizeof(filename), "/proc/%d/maps", pid);
-    fp = fopen(filename, "rt");
-    if (fp != nullptr)
-    {
-        while (fgets(buffer, sizeof(buffer), fp))
-        {
-            if (strstr(buffer, module_name))
-            {
-#if defined(__LP64__)
-                sscanf(buffer, "%lx-%lx %*s", &temp, &addr);
-#else
-                sscanf(buffer, "%x-%x %*s", &temp, &addr);
-#endif
-            }
-        }
-        fclose(fp);
-    }
-    return addr;
 }
 
 // 使用 /proc/pid/mem 读取

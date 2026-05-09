@@ -1,4 +1,45 @@
-# libMem Android/Linux 内存读写搜索库
+# MemorySearch - Android/Linux 内存读写与搜索库
+
+[![C++17](https://img.shields.io/badge/C%2B%2B-17-blue.svg)](https://isocpp.org/)
+[![Platform](https://img.shields.io/badge/platform-Android%20%7C%20Linux-lightgrey)](https://developer.android.com/ndk)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
+MemorySearch 是一个专为 **Android/Linux** 设计的轻量级 C++ 库，支持跨进程内存读写、特征码扫描、多线程搜索和结果集操作
+
+## 特性
+`` 需要与目标 相同的 UID 或者 已 Root 权限运行 ``
+-  **跨进程内存读写**：内提供 `process_vm_readv`/`writev` 和 `/proc/pid/mem` 双方式，自动 fallback, 或 自实现 读写接口
+- 🔍 **多种搜索模式**：
+  - 精确值搜索（任意类型，如 `int`、`float`、自定义结构体）
+  - 自定义谓词搜索（如范围、条件表达式）
+  - UTF-8 / UTF-16 字符串搜索（大小写可选，含空终止符）
+  - 十六进制特征码扫描（支持通配符 `??`）
+  - 异步扫描（回调模式，可提前终止）
+- ⚡ **多线程并行搜索**：自动划分内存区域，动态负载均衡，大幅提升扫描速度。
+- 🧩 **内存类型智能分类**：基于 `/proc/pid/maps` 自动识别 17+ 种内存区域（堆、栈、代码段、匿名、Ashmem、Java 堆等）。
+- 🔧 **结果集链式操作**：过滤、修改、刷新、回写一气呵成。
+- 📝 **基础汇编注入**：通过 Keystone 引擎写入汇编指令（ARM/ARM64/x86/x86_64）。
+
+## 快速开始
+
+### 编译要求
+
+- CMake 3.12+ 或直接使用 NDK 编译
+- C++17 编译器（GCC 8+ / Clang 7+ / Android NDK r23+）
+- **可选依赖**：[Keystone Engine](https://www.keystone-engine.org/)（若需 `write_assembly`，否则可禁用）
+
+### 编译示例
+
+#### Android NDK（可执行文件）
+```bash
+# 在项目根目录
+mkdir build && cd build
+cmake -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK/build/cmake/android.toolchain.cmake \
+      -DANDROID_ABI=arm64-v8a \
+      -DANDROID_PLATFORM=android-24 \
+      ..
+make
+```
 ## 1. 内存读写
 ```c++
 Mem men(12345); // 输入pid 或者 进程名 默认构造 传入当前进程pid
@@ -30,29 +71,85 @@ mem.write_assembly(address, instructions); // 写人汇编指令
 
 ```
 ## 2. 内存搜索
-支持多种搜索方式
 
-分类内存
-```c++
-namespace MemType
-{
-    constexpr uint32_t RANGE_ALL        = 0;            // 所有内存区域 (all)
-    constexpr uint32_t RANGE_C_HEAP     = 1 << 0;       // C++ 堆内存 (ch)
-    constexpr uint32_t RANGE_JAVA_HEAP  = 1 << 1;       // Java 虚拟机堆内存 (jh)
-    constexpr uint32_t RANGE_C_ALLOC    = 1 << 2;       // C++ 分配器内存 (ca)
-    constexpr uint32_t RANGE_C_DATA     = 1 << 3;       // C++ 数据段 (cd)
-    constexpr uint32_t RANGE_C_BSS      = 1 << 4;       // C++ BSS 段 (cb)
-    constexpr uint32_t RANGE_ANONYMOUS  = 1 << 5;       // 匿名内存区域 (a)
-    constexpr uint32_t RANGE_STACK      = 1 << 6;       // 栈内存区域 (s)
-    constexpr uint32_t RANGE_CODE_APP   = 1 << 14;      // 应用程序代码段 (xa)
-    constexpr uint32_t RANGE_CODE_SYSTEM= 1 << 15;      // 系统代码段 (xs)
-    constexpr uint32_t RANGE_JAVA       = 1 << 16;      // Java 虚拟机内存 (j)
-    constexpr uint32_t RANGE_B_BAD      = 1 << 17;      // 坏内存区域 (b)
-    constexpr uint32_t RANGE_ASHMEM     = 1 << 19;      // Android 共享内存 (as)
-    constexpr uint32_t RANGE_VIDEO      = 1 << 20;      // 视频内存区域 (v)
-    constexpr uint32_t RANGE_OTHER      = 1 << 31;      // 其他内存区域 (o)
-    constexpr uint32_t RANGE_NULL_PAGE  = 99999;        // 空页或无效内存 (null)
-}
+### 内存类型
+| 常量 | 含义 |
+|------|------|
+| `RANGE_C_HEAP` | C++ 堆内存 `Ch` |
+| `RANGE_JAVA_HEAP` | Java 堆 `Jh` |
+| `RANGE_C_ALLOC` | 分配器内存 `Ca` |
+| `RANGE_C_DATA` | C 数据段 `Cd` |
+| `RANGE_ANONYMOUS` | 匿名映射 `A` |
+| `RANGE_STACK` | 栈 `S`|
+| `RANGE_CODE_APP` | 应用代码段 `Xa` |
+| `RANGE_CODE_SYSTEM` | 系统代码段 `Xs` |
+| `RANGE_JAVA` | Java 虚拟机其他内存 `J` |
+| `RANGE_ASHMEM` | Android 共享内存 `As`|
+| `RANGE_VIDEO` | 视频/GPU 内存 `V` |
+| `RANGE_B_BAD` | 坏内存区域 `B`|
+| `RANGE_OTHER` | 其他 `O`|
+| `RANGE_ALL` | 所有类型（默认） |
+
+### 搜索参数 SearchParams
+
+| 字段 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `startAddress` | `uintptr_t` | `0` | 搜索起始地址（可裁剪） |
+| `endAddress` | `uintptr_t` | `UINTPTR_MAX` | 搜索结束地址 |
+| `memTypeMask` | `uint32_t` | `RANGE_ALL` | 内存类型掩码 |
+| `align` | `bool` | `true` | 按类型大小对齐 |
+| `parallel` | `bool` | `false` | 启用多线程搜索 |
+| `numThreads` | `unsigned int` | `0` | 线程数（0 = 自动检测 CPU 核心数） |
+
+### 结果集 `ResultSet<T>`
+
+`ResultSet<T>` 是搜索结果的容器，封装了地址和值的列表，支持链式操作，方便对搜索结果进行二次过滤、修改和回写。
+
+| 方法 | 说明 |
+|------|------|
+| `results()` / `size()` / `empty()` | 获取结果数组或数量 |
+| `filter(pred)` | 返回新的过滤后结果集 |
+| `filterSelf(pred)` | 原地过滤 |
+| `modify(func)` | 原地修改每个结果的值（但不回写进程） |
+| `refresh()` | 从进程重新读取每个地址的值 |
+| `writeBack()` | 将所有结果的值写回进程 |
+| `writeAll(newValue)` | 将所有地址的值设置为 `newValue` 并写回 |
+| `writeOffset(offset, newValue)` | 对所有 `address+offset` 写入新值 |
+| `addresses()` | 返回地址列表 |
+
+### API
+
+```cpp
+// 按精确值搜索
+ResultSet<T> find(const SearchParams& params, T value);
+
+// 自定义条件搜索
+ResultSet<T> find(const SearchParams& params,
+                  std::function<bool(const SearchResult<T>&)> judge);
+
+// 字符串搜索
+std::vector<uintptr_t> findStringUTF8(const SearchParams& params,
+                                      const std::string& str,
+                                      bool includeNull = true,
+                                      bool caseSensitive = true);
+std::vector<uintptr_t> findStringUTF16(const SearchParams& params,
+                                       const std::u16string& str,
+                                       bool includeNull = true,
+                                       bool caseSensitive = true);
+
+// 特征码搜索（原始字节 + 掩码）
+std::vector<uintptr_t> findPattern(const SearchParams& params,
+                                   const std::vector<uint8_t>& pattern,
+                                   const std::vector<uint8_t>& mask = {});
+
+// 从字符串解析模式（如 "90 90 ?? 90"）
+std::vector<uintptr_t> scanPattern(const SearchParams& params,
+                                   const std::string& patternStr);
+
+// 异步扫描（回调返回 false 时提前终止）
+void scanPatternAsync(const SearchParams& params,
+                      const std::string& patternStr,
+                      std::function<bool(uintptr_t)> callback);
 ```
 ### 1. 按值精确搜索
 ```c++
@@ -156,7 +253,7 @@ scanPattern
     std::cout << "   异步扫描完成，共找到 " << count << " 个地址\n";
 ```
 
-### 4. 修改数值
+### 修改数值
 ```c++
   auto &vec = const_cast<std::vector<Search::SearchResult<int>>(currentResults.results());
 vec[idx - 1].value = newVal;
@@ -242,7 +339,7 @@ int main()
     return 0;
 }
 ```
-## 支持多线程搜索
+## 多线程搜索
 ```c++
 #include "../core/Mem/Mem.hpp"
 #include <iostream>
@@ -329,7 +426,7 @@ int main()
 单线程搜索耗时: 91 秒
 ```
 
-详细例子 查看 main.cpp
+`详细例子 查看` [main.cpp](./main.cpp)
 
 ```
 D:\C++项目\MemorySearch>adb shell "su -c 'chmod 777 /data/local/tmp/MemorySearch && /data/local/tmp/MemorySearch'" 
