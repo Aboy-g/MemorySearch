@@ -126,3 +126,34 @@ int Process::get_pid_by_name(const char *process_name)
     closedir(dir);
     return pid;
 }
+
+std::vector<Process::ProcessInfo> Process::list_processes()
+{
+    std::vector<Process::ProcessInfo> processes;
+    DIR *dir = opendir("/proc");
+    if (!dir) {
+        return processes;  // 无法打开 /proc，返回空列表
+    }
+
+    struct dirent *entry;
+    while ((entry = readdir(dir)) != NULL) {
+        // 只处理数字目录（即 PID）
+        if (entry->d_type == DT_DIR && isdigit(entry->d_name[0])) {
+            int pid = atoi(entry->d_name);
+            char cmdline_path[32];
+            snprintf(cmdline_path, sizeof(cmdline_path), "/proc/%d/cmdline", pid);
+            FILE *fp = fopen(cmdline_path, "r");
+            if (fp) {
+                char cmdline[256];
+                fgets(cmdline, sizeof(cmdline), fp);
+                fclose(fp);
+                if (cmdline[0] != '\0') {
+                    processes.push_back({pid, std::string(cmdline)});
+                }
+            }
+        }
+    }
+
+    closedir(dir);
+    return processes;
+}
