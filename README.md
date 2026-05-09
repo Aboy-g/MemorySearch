@@ -242,7 +242,94 @@ int main()
     return 0;
 }
 ```
+## 支持多线程搜索
+```c++
+#include "../core/Mem/Mem.hpp"
+#include <iostream>
+#include "../core/Mem/Search.hpp"
 
+int main()
+{
+    int pid;
+    std::cout << "请输入目标进程 PID: ";
+    std::cin >> pid;
+    std::cin.ignore(); // 忽略换行符
+
+    Mem mem(pid);
+    Search search(mem);
+    Search::SearchParams params;
+    params.memTypeMask = MemType::RANGE_ALL;
+    params.parallel = true; // 启用多线程搜索
+
+    int value;
+    std::cout << "请输入要搜索的整数值: ";
+    std::cin >> value;
+    std::cin.ignore(); // 忽略换行符
+
+    std::time_t startTime = std::time(nullptr);
+    auto results = search.find<int>(params, value);
+    std::cout << "找到 " << results.size() << " 个结果:" << std::endl;
+
+    std::cout << "显示前 10 个结果:" << std::endl;
+    for (int i = 0; i < 10 && i < results.size(); ++i)
+    {
+        const auto &res = results.results()[i];
+        std::cout << "地址: 0x" << std::hex << res.address
+                  << " 值: " << std::dec << res.value << std::endl;
+    }
+    std::time_t endTime = std::time(nullptr);
+    std::cout << "搜索耗时: " << (endTime - startTime) << " 秒" << std::endl;
+
+    params.parallel = false; // 切换回单线程搜索
+    startTime = std::time(nullptr);
+    auto singleThreadResults = search.find<int>(params, value);
+    std::cout << "单线程搜索找到 " << singleThreadResults.size() << " 个结果:" << std::endl;
+
+        std::cout << "显示前 10 个结果:" << std::endl;
+    for (int i = 0; i < 10 && i < singleThreadResults.size(); ++i)
+    {
+        const auto &res = singleThreadResults.results()[i];
+        std::cout << "地址: 0x" << std::hex << res.address
+                  << " 值: " << std::dec << res.value << std::endl;
+    }
+    endTime = std::time(nullptr);
+    std::cout << "单线程搜索耗时: " << (endTime - startTime) << " 秒" << std::endl;
+}
+
+```
+
+```
+请输入目标进程 PID: 17928
+请输入要搜索的整数值: 1
+找到 2180398 个结果:
+显示前 10 个结果:
+地址: 0x6aa0000c 值: 1
+地址: 0x6aa003fc 值: 1
+地址: 0x6aa004e8 值: 1
+地址: 0x6aa00684 值: 1
+地址: 0x6aa00780 值: 1
+地址: 0x6aa0079c 值: 1
+地址: 0x6aa0089c 值: 1
+地址: 0x6aa00900 值: 1
+地址: 0x6aa00914 值: 1
+地址: 0x6aa00d88 值: 1
+搜索耗时: 11 秒
+单线程搜索找到 2181994 个结果:
+显示前 10 个结果:
+地址: 0x420005c 值: 1
+地址: 0x4200110 值: 1
+地址: 0x4200758 值: 1
+地址: 0x4200760 值: 1
+地址: 0x4200770 值: 1
+地址: 0x4200888 值: 1
+地址: 0x4200a88 值: 1
+地址: 0x4200a90 值: 1
+地址: 0x4200aa0 值: 1
+地址: 0x4200c60 值: 1
+单线程搜索耗时: 91 秒
+```
+
+```
 详细例子 查看 main.cpp
 
 ```
