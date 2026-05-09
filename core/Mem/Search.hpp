@@ -1,14 +1,14 @@
 #ifndef SEARCH_HPP
 #define SEARCH_HPP
 
-#include "Mem.hpp"
+#include "Membase.hpp"
 #include <functional>
 #include <vector>
 #include <cstring>
 #include <algorithm>
 #include <unordered_set>
 #include <unordered_map>
-
+#include "Process.hpp"
 class Search
 {
 public:
@@ -36,7 +36,7 @@ public:
         using FilterFunc = std::function<bool(const Result &)>;
         using ModifyFunc = std::function<void(Result &)>;
 
-        ResultSet(Mem &mem, std::vector<Result> results)
+        ResultSet(MemBase &mem, std::vector<Result> results)
             : m_mem(mem), m_results(std::move(results)) {}
 
         // 移动构造和移动赋值
@@ -161,11 +161,11 @@ public:
         }
 
     private:
-        Mem &m_mem;
+        MemBase &m_mem;
         std::vector<Result> m_results;
     };
 
-    explicit Search(Mem &mem) : m_mem(mem) {}
+    explicit Search(MemBase &mem) : m_mem(mem) {}
     Search() = delete;
 
     // 按值精确搜索
@@ -301,7 +301,7 @@ public:
                           std::function<bool(uintptr_t address)> callback);
 
 private:
-    Mem &m_mem; // 统一命名
+    MemBase &m_mem; // 统一命名
 
     // 辅助搜索函数（按字节模式快速扫描）
     std::vector<uintptr_t> search_bytes(uintptr_t start, uintptr_t end, const void *value, size_t size);
