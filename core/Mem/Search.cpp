@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <cctype>
 
-//辅助函数实现
+// 辅助函数实现
 
 std::vector<uintptr_t> Search::search_bytes(uintptr_t start, uintptr_t end, const void *value, size_t size)
 {
@@ -220,8 +220,6 @@ std::vector<uintptr_t> Search::findPattern(const SearchParams &params,
     return parallelScan(params, checker);
 }
 
-
-
 std::vector<uintptr_t> Search::scanPattern(const SearchParams &params,
                                            const std::string &patternStr)
 {
@@ -244,25 +242,22 @@ void Search::scanPatternAsync(const SearchParams &params,
     const size_t patternLen = pattern.size();
     std::vector<uint8_t> buffer(CHUNK_SIZE + patternLen - 1);
 
-    for (const auto &range : ranges)
+    if (params.parallel)
     {
-        uintptr_t cur = range.start;
-        uintptr_t end = range.end;
-        while (cur < end)
+        // 并行版本
+        auto checker = [&](uintptr_t base, const uint8_t *buf, size_t size,
+                           std::atomic<bool> &stopFlag,
+                           std::function<bool(uintptr_t)> &cb)
         {
-            size_t toRead = std::min(CHUNK_SIZE + patternLen - 1, end - cur);
-            if (!m_mem.read(cur, buffer.data(), toRead))
+            const size_t patLen = pattern.size();
+            for (size_t i = 0; i + patLen <= size; ++i)
             {
-                cur += CHUNK_SIZE;
-                continue;
-            }
-            size_t limit = toRead - patternLen + 1;
-            for (size_t i = 0; i < limit; ++i)
-            {
+                if (stopFlag.load())
+                    return;
                 bool match = true;
-                for (size_t j = 0; j < patternLen; ++j)
+                for (size_t j = 0; j < patLen; ++j)
                 {
-                    if ((mask[j] != 0) && (buffer[i + j] != pattern[j]))
+                    if (mask[j] && buf[i + j] != pattern[j])
                     {
                         match = false;
                         break;
@@ -270,12 +265,54 @@ void Search::scanPatternAsync(const SearchParams &params,
                 }
                 if (match)
                 {
-                    uintptr_t foundAddr = cur + i;
-                    if (!callback(foundAddr))
+                    uintptr_t addr = base + i;
+                    if (!cb(addr))
+                    {
+                        stopFlag.store(true);
                         return;
+                    }
                 }
             }
-            cur += CHUNK_SIZE;
+        };
+        parallelScanAsync(params, checker, callback);
+    }
+    else
+    {
+        // 单线程版本
+
+        for (const auto &range : ranges)
+        {
+            uintptr_t cur = range.start;
+            uintptr_t end = range.end;
+            while (cur < end)
+            {
+                size_t toRead = std::min(CHUNK_SIZE + patternLen - 1, end - cur);
+                if (!m_mem.read(cur, buffer.data(), toRead))
+                {
+                    cur += CHUNK_SIZE;
+                    continue;
+                }
+                size_t limit = toRead - patternLen + 1;
+                for (size_t i = 0; i < limit; ++i)
+                {
+                    bool match = true;
+                    for (size_t j = 0; j < patternLen; ++j)
+                    {
+                        if ((mask[j] != 0) && (buffer[i + j] != pattern[j]))
+                        {
+                            match = false;
+                            break;
+                        }
+                    }
+                    if (match)
+                    {
+                        uintptr_t foundAddr = cur + i;
+                        if (!callback(foundAddr))
+                            return;
+                    }
+                }
+                cur += CHUNK_SIZE;
+            }
         }
     }
 }

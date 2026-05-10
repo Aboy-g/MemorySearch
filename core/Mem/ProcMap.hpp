@@ -36,7 +36,7 @@ public:
     unsigned long inode;
     std::string pathname;
 
-    uint32_t getMemType() const
+    inline uint32_t getMemType() const
     {
         // 1. 特殊路径名或匿名区域
         if (pathname.empty())
@@ -137,11 +137,7 @@ public:
         // 代码段（可执行）
         if (executable)
         {
-            if (is_app)
-            {
-                return MemType::RANGE_CODE_APP;
-            }
-            else if (is_system)
+            if (is_system)
             {
                 return MemType::RANGE_CODE_SYSTEM;
             }

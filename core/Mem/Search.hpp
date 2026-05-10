@@ -253,6 +253,10 @@ private:
     bool parsePatternString(const std::string &patternStr,
                             std::vector<uint8_t> &pattern,
                             std::vector<uint8_t> &mask);
+
+    // 并行异步扫描框架
+    template <typename CheckFunc>
+    void parallelScanAsync(const SearchParams& params, CheckFunc&& checker, std::function<bool(uintptr_t)> callback) const;
 };
 
 // 获取过滤后的内存区域
@@ -341,6 +345,52 @@ inline std::vector<uintptr_t> Search::parallelScan(const SearchParams &params, C
     for (auto &v : threadResults)
         results.insert(results.end(), v.begin(), v.end());
     return results;
+}
+// CheckFunc void(uintptr_t base, const uint8_t* buffer, size_t bufSize, std::atomic<bool>& stopFlag, std::function<bool(uintptr_t)>& callback)
+template <typename CheckFunc>
+inline void Search::parallelScanAsync(const SearchParams& params, CheckFunc&& checker,
+                               std::function<bool(uintptr_t)> callback) const
+{
+    auto ranges = getFilteredRanges(params);
+    if (ranges.empty()) return;
+
+    unsigned int numThreads = params.numThreads;
+    if (numThreads == 0) {
+        numThreads = std::thread::hardware_concurrency();
+        if (numThreads == 0) numThreads = 4;
+    }
+    numThreads = std::min(numThreads, static_cast<unsigned int>(ranges.size()));
+
+    std::atomic<size_t> nextIdx{0};
+    std::atomic<bool> stopFlag{false};
+
+    const size_t CHUNK_SIZE = 1024 * 1024; // 1MB
+
+    auto worker = [&](int) {
+        std::vector<uint8_t> buffer(CHUNK_SIZE);
+        while (!stopFlag.load()) {
+            size_t idx = nextIdx.fetch_add(1);
+            if (idx >= ranges.size()) break;
+            const auto& range = ranges[idx];
+            uintptr_t cur = range.start;
+            const uintptr_t end = range.end;
+            while (cur < end && !stopFlag.load()) {
+                size_t toRead = std::min(CHUNK_SIZE, end - cur);
+                if (!m_mem.read(cur, buffer.data(), toRead)) {
+                    cur += CHUNK_SIZE;
+                    continue;
+                }
+                // 调用用户提供的 checker，传入 stopFlag 和 callback
+                checker(cur, buffer.data(), toRead, stopFlag, callback);
+                cur += CHUNK_SIZE;
+            }
+        }
+    };
+
+    std::vector<std::thread> threads;
+    for (unsigned int i = 0; i < numThreads; ++i)
+        threads.emplace_back(worker, i);
+    for (auto& t : threads) t.join();
 }
 
 // 按值搜索（模板）
