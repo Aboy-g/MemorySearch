@@ -109,3 +109,58 @@ ProcMap MemBase::get_address_map(uintptr_t address) const
     fclose(fp);
     return map;
 }
+
+std::vector<ProcMap> MemBase::get_module_maps(const char *module_name) const
+{
+    FILE *fp;
+    char filename[32], buffer[1024];
+    snprintf(filename, sizeof(filename), "/proc/%d/maps", pid);
+    fp = fopen(filename, "rt");
+    if (fp == nullptr)
+    {
+        fprintf(stderr, "Failed to open maps file for PID %d\n", pid);
+        return {};
+    }
+
+    std::vector<ProcMap> maps;
+    while (fgets(buffer, sizeof(buffer), fp))
+    {
+        uintptr_t start, end;
+        char perms[5], dev[12], pathname[256] = {0};
+        unsigned long offset;
+        unsigned long inode;
+#if defined(__LP64__)
+        int matched = sscanf(buffer, "%lx-%lx %4s %lx %11s %lu %255[^\n]", &start, &end, perms, &offset, dev, &inode, pathname);
+#else
+        int matched = sscanf(buffer, "%x-%x %4s %x %11s %lu %255[^\n]", &start, &end, perms, &offset, dev, &inode, pathname);
+#endif
+        if (matched < 6)
+        {
+            continue; // 格式错误，跳过
+        }
+        if (strstr(pathname, module_name))
+        {
+            ProcMap map;
+            map.startAddress = start;
+            map.endAddress = end;
+            map.length = end - start;
+            map.protection = 0;
+            map.readable = (perms[0] == 'r');
+            map.writeable = (perms[1] == 'w');
+            map.executable = (perms[2] == 'x');
+            map.is_private = (perms[3] == 'p');
+            map.is_shared = (perms[3] == 's');
+            map.is_ro = (map.readable && !map.writeable);
+            map.is_rw = (map.readable && map.writeable);
+            map.is_rx = (map.readable && map.executable);
+            map.offset = offset;
+            map.dev = dev;
+            map.inode = inode;
+            if (matched == 7)
+                map.pathname = pathname;
+            maps.push_back(map);
+        }
+    }
+    fclose(fp);
+    return maps;
+}

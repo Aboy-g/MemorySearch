@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include "ProcMap.hpp"
+#include <vector>
 class MemBase
 {
 public:
@@ -33,6 +34,7 @@ public:
     virtual uintptr_t get_module_base(const char *module_name) const;
     virtual uintptr_t get_module_end(const char *module_name) const;
     virtual ProcMap get_address_map(uintptr_t address) const ;
+    virtual std::vector<ProcMap> get_module_maps(const char *module_name) const;
 
 protected:
     int pid = -1;
