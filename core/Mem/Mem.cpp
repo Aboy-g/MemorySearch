@@ -4,7 +4,7 @@
 #include <sys/uio.h>
 #include <sys/syscall.h>
 #include <cerrno>
-#include "..\Keystone\includes\keystone.h"
+#include "../Keystone/includes/keystone.h"
 Mem::Mem()
 {
     set_pid(getpid());
