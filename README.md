@@ -103,7 +103,7 @@ mem.write_assembly(address, instructions); // 写人汇编指令
 | `endAddress` | `uintptr_t` | `UINTPTR_MAX` | 搜索结束地址 |
 | `memTypeMask` | `uint32_t` | `RANGE_ALL` | 内存类型掩码 |
 | `align` | `bool` | `true` | 按类型大小对齐 |
-| `parallel` | `bool` | `false` | 启用多线程搜索 |
+| `parallel` | `bool` | `true` | 启用多线程搜索 |
 | `numThreads` | `unsigned int` | `0` | 线程数（0 = 自动检测 CPU 核心数） |
 
 ### 结果集 `ResultSet<T>`
