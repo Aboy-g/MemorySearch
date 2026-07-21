@@ -19,8 +19,8 @@ int main()
     // mem.write_assembly(address, instructions);
 
     Mem mem(pid);
-    Search search(mem);
-    Search::SearchParams params;
+    SearchEngine search(mem);
+    SearchParams params;
     params.memTypeMask = MemType::RANGE_C_ALLOC;
     // auto results = search.find<int>(params, -975558080);
     // std::cout << "找到 " << results.size() << " 个结果:" << std::endl;
@@ -45,7 +45,7 @@ int main()
     std::cout << "请输入要搜索的字符串: ";
     std::cin >> pattern;
     std::cout << "搜索字符串..." << std::endl;
-    auto results = search.findStringUTF8(params, pattern, false, true);
+    auto results = search.searchString(params, pattern, false, true);
     for (const auto &addr : results)
     {
         std::cout << "找到字符串地址: 0x" << std::hex << addr << std::endl;

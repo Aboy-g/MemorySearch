@@ -11,14 +11,40 @@ add_executable(test2
         test2.cpp
 )
 
+add_executable(benchmark
+        benchmark.cpp
+)
+
+add_executable(fuzzy_tool
+        fuzzy_tool.cpp
+)
+
+add_executable(mmap_bench
+        mmap_bench.cpp
+)
+
 # 链接所需的库
 target_link_libraries(test
         PRIVATE
         Mem
 )
 
-# 链接所需的库
 target_link_libraries(test2
+        PRIVATE
+        Mem
+)
+
+target_link_libraries(benchmark
+        PRIVATE
+        Mem
+)
+
+target_link_libraries(fuzzy_tool
+        PRIVATE
+        Mem
+)
+
+target_link_libraries(mmap_bench
         PRIVATE
         Mem
 )

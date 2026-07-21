@@ -4,9 +4,12 @@ project(Mem)
 set(CMAKE_CXX_STANDARD 17)
 
 file(GLOB MEM_SOURCES "Mem/*.cpp")
-add_library(Mem STATIC 
+add_library(Mem STATIC
         ${MEM_SOURCES}
         Mem/Membase.cpp
+        Mem/MemMmap.cpp
+        Mem/ProcIO.cpp
+        Mem/FuzzySearch.cpp
 )
 
 #导入Keystone静态库

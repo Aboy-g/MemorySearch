@@ -20,8 +20,15 @@ namespace MemType
     constexpr uint32_t RANGE_B_BAD      = 1 << 17;      // 坏内存区域 (b)
     constexpr uint32_t RANGE_ASHMEM     = 1 << 19;      // Android 共享内存 (as)
     constexpr uint32_t RANGE_VIDEO      = 1 << 20;      // 视频内存区域 (v)
-    constexpr uint32_t RANGE_OTHER      = 1 << 31;      // 其他内存区域 (o)
+    constexpr uint32_t RANGE_FILE_DATA  = 1 << 21;      // 文件映射数据 (fd)
+    constexpr uint32_t RANGE_OTHER      = 1 << 31;      // 其他/未知 (o)
     constexpr uint32_t RANGE_NULL_PAGE  = 99999;        // 空页或无效内存 (null)
+
+    // 常用组合
+    constexpr uint32_t RANGE_RW         = RANGE_C_HEAP | RANGE_C_ALLOC | RANGE_C_DATA |
+                                          RANGE_C_BSS | RANGE_ANONYMOUS | RANGE_STACK |
+                                          RANGE_JAVA_HEAP | RANGE_FILE_DATA;
+    constexpr uint32_t RANGE_RX         = RANGE_CODE_APP | RANGE_CODE_SYSTEM;
 }
 class ProcMap
 {
@@ -38,46 +45,53 @@ public:
 
     inline uint32_t getMemType() const
     {
-        // 1. 特殊路径名或匿名区域
-        if (pathname.empty())
+        // 不可读的区域 → 标记为 OTHER (实际搜索时会被过滤)
+        if (!readable)
         {
-            // 可读写私有匿名 -> 匿名内存
-            if (readable && writeable && !executable && is_private)
-            {
-                return MemType::RANGE_ANONYMOUS;
-            }
-            // 可执行私有匿名 -> JIT 代码（应用代码）
-            if (executable && is_private)
-            {
-                return MemType::RANGE_CODE_APP;
-            }
             return MemType::RANGE_OTHER;
         }
 
-        // 2. 特定名称的映射（优先级最高）
-        if (pathname == "[heap]")
+        // ── 1. 匿名区域 ──────────────────────────────
+        if (pathname.empty())
         {
-            return MemType::RANGE_C_HEAP;
-        }
-        if (pathname.find("[stack") == 0)
-        {
-            return MemType::RANGE_STACK;
-        }
-        if (pathname == "[anon:.bss]")
-        {
-            return MemType::RANGE_C_BSS;
-        }
-        if (pathname.find("[anon:libc_malloc]") == 0 ||
-            pathname.find("[anon:scudo") == 0)
-        {
-            return MemType::RANGE_C_ALLOC;
-        }
-        if (pathname == "[vdso]" || pathname == "[vsyscall]" || pathname == "[vvar]")
-        {
-            return MemType::RANGE_CODE_SYSTEM;
+            if (writeable && !executable && is_private)
+                return MemType::RANGE_ANONYMOUS;
+            if (executable && is_private)
+                return MemType::RANGE_CODE_APP;  // JIT 代码
+            return MemType::RANGE_OTHER;
         }
 
-        // 3. Dalvik / Java 相关
+        // ── 2. 特殊命名映射 ──────────────────────────
+        if (pathname == "[heap]")
+            return MemType::RANGE_C_HEAP;
+        if (pathname.find("[stack") == 0)
+            return MemType::RANGE_STACK;
+        if (pathname == "[anon:.bss]")
+            return MemType::RANGE_C_BSS;
+        if (pathname.find("[anon:libc_malloc]") == 0 ||
+            pathname.find("[anon:scudo") == 0)
+            return MemType::RANGE_C_ALLOC;
+        if (pathname == "[vdso]" || pathname == "[vsyscall]" || pathname == "[vvar]")
+            return MemType::RANGE_CODE_SYSTEM;
+
+        // ── 3. 坏内存 (GPU/字体) ─────────────────────
+        if (pathname.find("kgsl-3d0") != std::string::npos ||
+            pathname.find(".ttf") != std::string::npos)
+            return MemType::RANGE_B_BAD;
+
+        // ── 4. 视频内存 ──────────────────────────────
+        if (pathname.find("/dev/mali") != std::string::npos ||
+            pathname.find("/dev/ion") != std::string::npos)
+            return MemType::RANGE_VIDEO;
+
+        // ── 5. Ashmem ────────────────────────────────
+        if (pathname.find("/dev/ashmem") != std::string::npos)
+        {
+            if (executable) return MemType::RANGE_CODE_APP;
+            return MemType::RANGE_ASHMEM;
+        }
+
+        // ── 6. Dalvik/Java ───────────────────────────
         bool is_dalvik = (pathname.find("dalvik-") != std::string::npos);
         bool is_dex_jar_apk = (pathname.find(".dex") != std::string::npos ||
                                pathname.find(".jar") != std::string::npos ||
@@ -85,72 +99,37 @@ public:
         if (is_dalvik || is_dex_jar_apk)
         {
             if (readable && writeable && !executable)
-            {
                 return MemType::RANGE_JAVA_HEAP;
-            }
             if (executable)
-            {
                 return MemType::RANGE_CODE_APP;
-            }
             return MemType::RANGE_JAVA;
         }
 
-        // 4. Ashmem 共享内存
-        if (pathname.find("/dev/ashmem") != std::string::npos)
-        {
-            if (readable && writeable && !executable && !is_private)
-            {
-                return MemType::RANGE_ASHMEM;
-            }
-            // 可执行 ashmem（如快速代码加载）视为应用代码
-            if (executable)
-            {
-                return MemType::RANGE_CODE_APP;
-            }
-            return MemType::RANGE_ASHMEM;
-        }
+        // ── 7. 路径前缀判断 (文件映射) ────────────────
+        bool is_system_path = (pathname.find("/system/") == 0 ||
+                               pathname.find("/vendor/") == 0 ||
+                               pathname.find("/apex/") == 0 ||
+                               pathname.find("/product/") == 0 ||
+                               pathname.find("/memfd") == 0);
+        bool is_file_path = (pathname[0] == '/');
 
-        // 5. 视频内存
-        if (pathname.find("/dev/mali") != std::string::npos ||
-            pathname.find("/dev/ion") != std::string::npos)
-        {
-            return MemType::RANGE_VIDEO;
-        }
-
-        // 6. 坏内存区域（GPU 相关、字体文件等）
-        if (pathname.find("kgsl-3d0") != std::string::npos ||
-            pathname.find(".ttf") != std::string::npos)
-        {
-            return MemType::RANGE_B_BAD;
-        }
-
-        // 7. 普通文件映射：区分系统/应用
-        bool is_system = (pathname.find("/system/") == 0 ||
-                          pathname.find("/vendor/") == 0 ||
-                          pathname.find("/apex/") == 0 ||
-                          pathname.find("/product/") == 0 ||
-                          pathname.find("/memfd") == 0); // 新增 memfd
-        bool is_app = (pathname.find("/data/app/") == 0 ||
-                       pathname.find("/data/data/") == 0 ||
-                       pathname.find("/data/user/") == 0);
-
-        // 代码段（可执行）
+        // 可执行 → 代码段
         if (executable)
         {
-            if (is_system)
-            {
+            if (is_system_path)
                 return MemType::RANGE_CODE_SYSTEM;
-            }
-            return MemType::RANGE_CODE_APP; // 默认应用代码
+            return MemType::RANGE_CODE_APP;
         }
 
-        // 数据段（可读可写，不可执行，私有，有文件后援）
-        if (readable && writeable && !executable && is_private && !pathname.empty())
-        {
+        // 可读写文件映射 → C_DATA (私有) 或 FILE_DATA
+        if (readable && writeable && is_private && is_file_path)
             return MemType::RANGE_C_DATA;
-        }
 
-        // 其他
+        // 只读/共享文件映射 → FILE_DATA (如 .so 数据段, 资源文件等)
+        if (readable && is_file_path)
+            return MemType::RANGE_FILE_DATA;
+
+        // ── 8. 兜底 ──────────────────────────────────
         return MemType::RANGE_OTHER;
     }
 
