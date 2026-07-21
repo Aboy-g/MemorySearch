@@ -311,8 +311,15 @@ private:
                           case DType::INT64:after=fuzzy.refine<int64_t>(cop);break;
                           case DType::FLOAT:after=fuzzy.refine<float>(cop);break;
                           case DType::DOUBLE:after=fuzzy.refine<double>(cop);break;}
-            printf(CLR_GREEN "  ✓ %s → %s\n" CLR_RESET, fmtSize(before).c_str(), fmtSize(after).c_str());
-            if (after>0 && after<=10) listTop(10);
+            // 显示: 区域快照模式用估算值, 个体模式用实际值
+            auto showN = [](size_t n) -> std::string {
+                if (n > 1000000) return fmtSize(n) + " 条";
+                return std::to_string(n) + " 条";
+            };
+            printf(CLR_GREEN "  ✓ %s → %s\n" CLR_RESET, showN(before).c_str(), showN(after).c_str());
+            if (after <= 20 && after > 0) listTop(after);
+            else if (after > 100000)
+                printf(CLR_YELLOW "  ⚠ 结果较多, 可继续 f+/- 精炼或 s <value> 精确过滤\n" CLR_RESET);
         } else {
             // 精确值过滤
             size_t after = 0;
@@ -320,8 +327,11 @@ private:
                           case DType::INT64:{int64_t v;if(parseNum(op,v))after=fuzzy.filterExact<int64_t>(v);break;}
                           case DType::FLOAT:{float v;if(parseNum(op,v))after=fuzzy.filterExact<float>(v);break;}
                           case DType::DOUBLE:{double v;if(parseNum(op,v))after=fuzzy.filterExact<double>(v);break;}}
-            printf(CLR_GREEN "  ✓ %s → %s\n" CLR_RESET, fmtSize(before).c_str(), fmtSize(after).c_str());
-            if (after>0 && after<=10) listTop(10);
+            auto showN = [](size_t n) -> std::string {
+                return n > 1000000 ? fmtSize(n) + " 条" : std::to_string(n) + " 条";
+            };
+            printf(CLR_GREEN "  ✓ %s → %s\n" CLR_RESET, showN(before).c_str(), showN(after).c_str());
+            if (after <= 20 && after > 0) listTop(after);
         }
     }
 
@@ -457,10 +467,10 @@ static int selectProcess() {
     int pid = atoi(line.c_str());
     if (pid > 0) return pid;
 
-    // 包名 (精确 → 模糊)
+    // 包名 — 搜索全部进程 (不限于显示的前40条)
     pid = Process::get_pid_by_name(line.c_str());
     if (pid > 0) return pid;
-    for (auto& p : all)
+    for (auto& p : procs)  // 用原始全量列表
         if (p.name.find(line) != std::string::npos) return p.pid;
 
     printf(CLR_RED "  未找到: %s\n" CLR_RESET, line.c_str());

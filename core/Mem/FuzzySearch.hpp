@@ -470,24 +470,35 @@ inline size_t FuzzySearch::refineFromRegions(
     SearchEngine::ProgressCallback progressCb) {
     if (maxResults == 0) maxResults = m_cfg.maxIndividual;
 
+    size_t n = 0;
     if constexpr (std::is_same_v<T, int32_t>) {
         m_resultsI32.clear();
         m_snapshot.refineRegions<T>(m_mem, m_resultsI32, op, maxResults, progressCb);
-        return m_resultsI32.size();
+        n = m_resultsI32.size();
+        m_snapshot.clear();         // 清除区域快照
+        m_snapshot.capture(m_resultsI32);  // 重建个体快照
     } else if constexpr (std::is_same_v<T, int64_t>) {
         m_resultsI64.clear();
         m_snapshot.refineRegions<T>(m_mem, m_resultsI64, op, maxResults, progressCb);
-        return m_resultsI64.size();
+        n = m_resultsI64.size();
+        m_snapshot.clear();
+        m_snapshot.capture(m_resultsI64);
     } else if constexpr (std::is_same_v<T, float>) {
         m_resultsF32.clear();
         m_snapshot.refineRegions<T>(m_mem, m_resultsF32, op, maxResults, progressCb);
-        return m_resultsF32.size();
+        n = m_resultsF32.size();
+        m_snapshot.clear();
+        m_snapshot.capture(m_resultsF32);
     } else if constexpr (std::is_same_v<T, double>) {
         m_resultsF64.clear();
         m_snapshot.refineRegions<T>(m_mem, m_resultsF64, op, maxResults, progressCb);
-        return m_resultsF64.size();
+        n = m_resultsF64.size();
+        m_snapshot.clear();
+        m_snapshot.capture(m_resultsF64);
     }
-    return 0;
+    m_phase = Phase::INDIVIDUAL;
+    m_stats.phase2Results = n;
+    return n;
 }
 
 // ── refineIndividual ────────────────────────────────────
@@ -508,14 +519,19 @@ inline size_t FuzzySearch::refineIndividual(CompareOp op, size_t maxResults) {
     }
 
     size_t result = filtered.size();
-    if constexpr (std::is_same_v<T, int32_t>)
+    if constexpr (std::is_same_v<T, int32_t>) {
         m_resultsI32 = std::move(filtered);
-    else if constexpr (std::is_same_v<T, int64_t>)
+        m_snapshot.capture(m_resultsI32);  // 重新同步快照
+    } else if constexpr (std::is_same_v<T, int64_t>) {
         m_resultsI64 = std::move(filtered);
-    else if constexpr (std::is_same_v<T, float>)
+        m_snapshot.capture(m_resultsI64);
+    } else if constexpr (std::is_same_v<T, float>) {
         m_resultsF32 = std::move(filtered);
-    else if constexpr (std::is_same_v<T, double>)
+        m_snapshot.capture(m_resultsF32);
+    } else if constexpr (std::is_same_v<T, double>) {
         m_resultsF64 = std::move(filtered);
+        m_snapshot.capture(m_resultsF64);
+    }
     return result;
 }
 
@@ -532,14 +548,19 @@ inline size_t FuzzySearch::filterIndividual(Pred pred) {
     }
 
     size_t result = filtered.size();
-    if constexpr (std::is_same_v<T, int32_t>)
+    if constexpr (std::is_same_v<T, int32_t>) {
         m_resultsI32 = std::move(filtered);
-    else if constexpr (std::is_same_v<T, int64_t>)
+        m_snapshot.capture(m_resultsI32);
+    } else if constexpr (std::is_same_v<T, int64_t>) {
         m_resultsI64 = std::move(filtered);
-    else if constexpr (std::is_same_v<T, float>)
+        m_snapshot.capture(m_resultsI64);
+    } else if constexpr (std::is_same_v<T, float>) {
         m_resultsF32 = std::move(filtered);
-    else if constexpr (std::is_same_v<T, double>)
+        m_snapshot.capture(m_resultsF32);
+    } else if constexpr (std::is_same_v<T, double>) {
         m_resultsF64 = std::move(filtered);
+        m_snapshot.capture(m_resultsF64);
+    }
     return result;
 }
 
