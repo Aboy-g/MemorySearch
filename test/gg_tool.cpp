@@ -111,7 +111,7 @@ public:
             else if (cmd == "f") refine(parts);
             else if (cmd == "l") showResults(parts);
             else if (cmd == "w") cmdWrite(parts);
-            else if (cmd == "c") { fuzzy.reset(); printf(GRN "  已清空\n" RST); }
+            else if (cmd == "c") { fuzzy.reset(); tmpAddrs.clear(); tmpVals.clear(); printf(GRN "  已清空\n" RST); }
             else if (cmd == "v") verifyAddr(parts);
             else if (cmd == "dump") dumpMem(parts);
             else if (cmd == "map") showMap();
@@ -137,7 +137,7 @@ private:
         while (ss >> t) r.push_back(t); return r;
     }
 
-    size_t totalSize() const { return totalSize() > 0 ? totalSize() : tmpAddrs.size(); }
+    size_t totalSize() const { return fuzzy.size() > 0 ? fuzzy.size() : tmpAddrs.size(); }
     void showBar() {
         size_t n = totalSize();
         printf(GRY "  [%s|%s] " RST "%s" RST "\n",
@@ -229,7 +229,7 @@ private:
                 auto t1 = std::chrono::high_resolution_clock::now();
                 double ms = std::chrono::duration<double, std::milli>(t1 - t0).count();
                 printf("\r" GRN "  ✓ %s 结果 | %s\n" RST, fmtN(r.size()).c_str(), fmtTime(ms).c_str());
-                convertResults(r);
+                storeResults(r);
             });
             return;
         }
@@ -274,7 +274,7 @@ private:
             auto t1 = std::chrono::high_resolution_clock::now();
             double ms = std::chrono::duration<double, std::milli>(t1 - t0).count();
             printf("\r" GRN "  ✓ %s 结果 | %s\n" RST, fmtN(r.size()).c_str(), fmtTime(ms).c_str());
-            convertResults(r);
+            storeResults(r);
         });
     }
 
@@ -289,7 +289,7 @@ private:
             auto t1 = std::chrono::high_resolution_clock::now();
             double ms = std::chrono::duration<double, std::milli>(t1 - t0).count();
             printf("\r" GRN "  ✓ %s 结果 | %s\n" RST, fmtN(r.size()).c_str(), fmtTime(ms).c_str());
-            convertResults(r);
+            storeResults(r);
         });
     }
 
@@ -318,17 +318,39 @@ private:
 
     // ==================== 精炼 ====================
     void refine(const std::vector<std::string>& parts) {
-        if (totalSize() == 0 && fuzzy.phase() != FuzzySearch::Phase::REGION_SNAPSHOT) {
+        size_t n = totalSize();
+        if (n == 0 && fuzzy.phase() != FuzzySearch::Phase::REGION_SNAPSHOT) {
             printf(RED "  先搜索 (s/u)\n" RST); return;
         }
         if (parts.size() < 2) { printf("  f +|-|~|=|<val>|>N|<N\n"); return; }
         auto op = parts[1];
-        size_t before = totalSize();
+        size_t before = n;
         if (fuzzy.phase() == FuzzySearch::Phase::REGION_SNAPSHOT && before == 0)
             before = fuzzy.stats().phase1Results;
 
+        bool useTmp = (fuzzy.size() == 0 && !tmpAddrs.empty());
         auto t0 = std::chrono::high_resolution_clock::now();
-        if (op == "+" || op == "-" || op == "~" || op == "=") {
+
+        if (useTmp) {
+            // 在 tmp 结果上直接过滤: 读实时值 → 比较
+            std::vector<uintptr_t> newA; std::vector<int64_t> newV;
+            callTyped([&](auto d) {
+                using T = decltype(d);
+                for (size_t i = 0; i < tmpAddrs.size(); i++) {
+                    T cur{}; mem.read(tmpAddrs[i], &cur, sizeof(T));
+                    bool keep = false;
+                    if (op == "+") { T old; memcpy(&old, &tmpVals[i], sizeof(T)); keep = cur > old; }
+                    else if (op == "-") { T old; memcpy(&old, &tmpVals[i], sizeof(T)); keep = cur < old; }
+                    else if (op == "~") { T old; memcpy(&old, &tmpVals[i], sizeof(T)); keep = cur != old; }
+                    else if (op == "=") { T old; memcpy(&old, &tmpVals[i], sizeof(T)); keep = cur == old; }
+                    else {
+                        T ref; if (parse(op, ref)) keep = (cur == ref);
+                    }
+                    if (keep) { newA.push_back(tmpAddrs[i]); newV.push_back((int64_t)cur); }
+                }
+            });
+            tmpAddrs.swap(newA); tmpVals.swap(newV);
+        } else if (op == "+" || op == "-" || op == "~" || op == "=") {
             CompareOp cop = op == "+" ? CompareOp::INCREASED : op == "-" ? CompareOp::DECREASED
                           : op == "~" ? CompareOp::CHANGED : CompareOp::UNCHANGED;
             callTyped([&](auto d) { fuzzy.refine<decltype(d)>(cop); });
@@ -345,7 +367,8 @@ private:
         }
         auto t1 = std::chrono::high_resolution_clock::now();
         double ms = std::chrono::duration<double, std::milli>(t1 - t0).count();
-        printf(GRN "  ✓ %s → %s 条 | %s\n" RST, fmtN(before).c_str(), fmtN(totalSize()).c_str(), fmtTime(ms).c_str());
+        printf(GRN "  ✓ %s → %s 条 | %s\n" RST,
+               fmtN(before).c_str(), fmtN(totalSize()).c_str(), fmtTime(ms).c_str());
         if (totalSize() <= 20 && totalSize() > 0) showResults({"l"});
     }
 
@@ -382,23 +405,38 @@ private:
     }
 
     void cmdWrite(const std::vector<std::string>& parts) {
-        if (totalSize() == 0) { printf(RED "  无结果\n" RST); return; }
+        size_t n = totalSize();
+        if (n == 0) { printf(RED "  无结果\n" RST); return; }
         if (parts.size() < 2) { printf("  w <value> | w <index> <value>\n"); return; }
+        bool useTmp = (fuzzy.size() == 0 && !tmpAddrs.empty());
+
         if (parts.size() >= 3) {
-            int idx; if (!parse(parts[1], idx) || idx < 1 || (size_t)idx > totalSize())
+            int idx; if (!parse(parts[1], idx) || idx < 1 || (size_t)idx > n)
             { printf(RED "  无效索引\n" RST); return; }
-            callTyped([&](auto d) {
-                using T = decltype(d); T v; if (!parse(parts[2], v)) return;
-                fuzzy.setValueAt<T>(idx - 1, v); fuzzy.writeBack<T>();
-            });
+            size_t i = idx - 1;
+            if (useTmp) {
+                callTyped([&](auto d) {
+                    using T = decltype(d); T v; if (!parse(parts[2], v)) return;
+                    mem.Write<T>(tmpAddrs[i], v);
+                });
+            } else {
+                callTyped([&](auto d) {
+                    using T = decltype(d); T v; if (!parse(parts[2], v)) return;
+                    fuzzy.setValueAt<T>(i, v); fuzzy.writeBack<T>();
+                });
+            }
             printf(GRN "  ✓ [%d] 已修改并写回\n" RST, idx);
         } else {
             callTyped([&](auto d) {
                 using T = decltype(d); T v; if (!parse(parts[1], v)) return;
-                for (size_t i = 0; i < totalSize(); i++) fuzzy.setValueAt<T>(i, v);
-                fuzzy.writeBack<T>();
+                if (useTmp)
+                    for (size_t i = 0; i < n; i++) mem.Write<T>(tmpAddrs[i], v);
+                else {
+                    for (size_t i = 0; i < n; i++) fuzzy.setValueAt<T>(i, v);
+                    fuzzy.writeBack<T>();
+                }
             });
-            printf(GRN "  ✓ 已修改 %s 条并写回\n" RST, fmtN(totalSize()).c_str());
+            printf(GRN "  ✓ 已修改 %s 条并写回\n" RST, fmtN(n).c_str());
         }
     }
 
@@ -532,16 +570,28 @@ private:
     std::vector<int64_t> tmpVals;  // 用最大类型存
 
     uintptr_t addrAt(size_t i) {
-        switch (vtype) { case VType::DWORD: return fuzzy.addrAt<int32_t>(i);
-                         case VType::FLOAT: return fuzzy.addrAt<float>(i);
-                         case VType::QWORD: return fuzzy.addrAt<int64_t>(i);
-                         case VType::DOUBLE: return fuzzy.addrAt<double>(i); } return 0;
+        if (fuzzy.size() > 0) {
+            switch (vtype) { case VType::DWORD: return fuzzy.addrAt<int32_t>(i);
+                             case VType::FLOAT: return fuzzy.addrAt<float>(i);
+                             case VType::QWORD: return fuzzy.addrAt<int64_t>(i);
+                             case VType::DOUBLE: return fuzzy.addrAt<double>(i); }
+        }
+        return i < tmpAddrs.size() ? tmpAddrs[i] : 0;
     }
     void printVal(size_t i) {
-        switch (vtype) { case VType::DWORD: printf("%d", fuzzy.valueAt<int32_t>(i)); break;
-                         case VType::FLOAT: printf("%.6f", fuzzy.valueAt<float>(i)); break;
-                         case VType::QWORD: printf("%lld", (long long)fuzzy.valueAt<int64_t>(i)); break;
-                         case VType::DOUBLE: printf("%.12f", fuzzy.valueAt<double>(i)); break; }
+        if (fuzzy.size() > 0) {
+            switch (vtype) { case VType::DWORD: printf("%d", fuzzy.valueAt<int32_t>(i)); break;
+                             case VType::FLOAT: printf("%.6f", fuzzy.valueAt<float>(i)); break;
+                             case VType::QWORD: printf("%lld", (long long)fuzzy.valueAt<int64_t>(i)); break;
+                             case VType::DOUBLE: printf("%.12f", fuzzy.valueAt<double>(i)); break; }
+            return;
+        }
+        if (i < tmpVals.size()) {
+            switch (vtype) { case VType::DWORD: printf("%d", (int32_t)tmpVals[i]); break;
+                             case VType::FLOAT: { float f; int32_t v=(int32_t)tmpVals[i]; memcpy(&f,&v,4); printf("%.6f",f); break; }
+                             case VType::QWORD: printf("%lld", (long long)tmpVals[i]); break;
+                             case VType::DOUBLE: { double d; memcpy(&d,&tmpVals[i],8); printf("%.12f",d); break; } }
+        }
     }
     template <typename T> void printOne(T v) { printf("%d", (int)v); }
     void printOne(float v) { printf("%.6f", v); }
