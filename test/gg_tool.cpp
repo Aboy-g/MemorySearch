@@ -214,7 +214,7 @@ private:
     // ==================== 搜索 ====================
     void searchExact(const std::vector<std::string>& parts) {
         if (parts.size() < 2) { printf("  s <value> | s >N | s <N\n"); return; }
-        fuzzy.reset();
+        fuzzy.reset(); tmpAddrs.clear(); tmpVals.clear();
         auto op = parts[1];
 
         // 大于/小于
@@ -248,13 +248,17 @@ private:
     }
 
     void searchUnknown(const std::vector<std::string>&) {
-        fuzzy.reset();
+        fuzzy.reset(); tmpAddrs.clear(); tmpVals.clear();
         auto t0 = std::chrono::high_resolution_clock::now();
         callTyped([&](auto dummy) { fuzzy.searchUnknown<decltype(dummy)>(sp, 0, bar); });
         auto t1 = std::chrono::high_resolution_clock::now();
         double ms = std::chrono::duration<double, std::milli>(t1 - t0).count();
-        printf("\r" GRN "  ✓ %s 条 | %s | 快照已创建\n" RST,
-               fmtN(totalSize()).c_str(), fmtTime(ms).c_str());
+        if (fuzzy.phase() == FuzzySearch::Phase::REGION_SNAPSHOT)
+            printf("\r" GRN "  ✓ 区域快照 %s | %s\n" RST,
+                   fmtS(fuzzy.memoryUsed()).c_str(), fmtTime(ms).c_str());
+        else
+            printf("\r" GRN "  ✓ %s 条 | %s | 快照已创建\n" RST,
+                   fmtN(totalSize()).c_str(), fmtTime(ms).c_str());
     }
 
     void searchCompare(const std::vector<std::string>& parts) {
