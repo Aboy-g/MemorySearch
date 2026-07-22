@@ -339,11 +339,15 @@ private:
                 for (size_t i = 0; i < tmpAddrs.size(); i++) {
                     T cur{}; mem.read(tmpAddrs[i], &cur, sizeof(T));
                     bool keep = false;
-                    if (op == "+") { T old; memcpy(&old, &tmpVals[i], sizeof(T)); keep = cur > old; }
-                    else if (op == "-") { T old; memcpy(&old, &tmpVals[i], sizeof(T)); keep = cur < old; }
-                    else if (op == "~") { T old; memcpy(&old, &tmpVals[i], sizeof(T)); keep = cur != old; }
-                    else if (op == "=") { T old; memcpy(&old, &tmpVals[i], sizeof(T)); keep = cur == old; }
-                    else {
+                    if (op == "+" || op == "-" || op == "~" || op == "=") {
+                        T old; memcpy(&old, &tmpVals[i], sizeof(T));
+                        keep = (op=="+") ? cur>old : (op=="-") ? cur<old :
+                               (op=="~") ? cur!=old : cur==old;
+                    } else if (op.size()>=2 && op[0]=='>') {
+                        T ref; std::string vs=op.substr(1); if(parse(vs,ref)) keep=cur>ref;
+                    } else if (op.size()>=2 && op[0]=='<') {
+                        T ref; std::string vs=op.substr(1); if(parse(vs,ref)) keep=cur<ref;
+                    } else {
                         T ref; if (parse(op, ref)) keep = (cur == ref);
                     }
                     if (keep) { newA.push_back(tmpAddrs[i]); newV.push_back((int64_t)cur); }
