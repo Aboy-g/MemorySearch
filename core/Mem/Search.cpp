@@ -4,6 +4,16 @@
 #include <cctype>
 #include <chrono>
 
+// ── 辅助: 合并 parallelScan 结果 ─────────────────────
+static std::vector<uintptr_t> mergeThreadResults(std::vector<std::vector<uintptr_t>>& tr) {
+    size_t total = 0;
+    for (auto& v : tr) total += v.size();
+    std::vector<uintptr_t> r;
+    r.reserve(total);
+    for (auto& v : tr) r.insert(r.end(), v.begin(), v.end());
+    return r;
+}
+
 // ============================================================
 // 十六进制模式字符串解析
 // ============================================================
@@ -102,12 +112,7 @@ std::vector<uintptr_t> SearchEngine::searchPattern(
     };
 
     parallelScan(params, checker, threadResults);
-    size_t total = 0;
-    for (auto& v : threadResults) total += v.size();
-    std::vector<uintptr_t> results;
-    results.reserve(total);
-    for (auto& v : threadResults)
-        results.insert(results.end(), v.begin(), v.end());
+    auto results = mergeThreadResults(threadResults);
     if (maxR > 0 && results.size() > maxR) results.resize(maxR);
     return results;
 }
@@ -218,13 +223,12 @@ std::vector<uintptr_t> SearchEngine::searchString(const SearchParams& params,
         return searchPattern(params, pattern, mask);
     }
 
-    // 大小写不敏感 — parallelScan + 自定义 checker
+    // 大小写不敏感 — parallelScan + 逐字节 tolower
     const size_t patLen2 = pattern.size();
     std::vector<std::vector<uintptr_t>> threadResults;
     auto checker2 = [&](uintptr_t base, const uint8_t* buffer, size_t bufSize,
                          std::vector<uintptr_t>& out) {
-        size_t limit = bufSize - patLen2 + 1;
-        for (size_t i = 0; i < limit; i++) {
+        for (size_t i = 0; i + patLen2 <= bufSize; i++) {
             bool match = true;
             for (size_t j = 0; j < patLen2; j++) {
                 if ((unsigned char)std::tolower(buffer[i + j]) != pattern[j])
@@ -234,14 +238,7 @@ std::vector<uintptr_t> SearchEngine::searchString(const SearchParams& params,
         }
     };
     parallelScan(params, checker2, threadResults);
-
-    size_t total2 = 0;
-    for (auto& v : threadResults) total2 += v.size();
-    std::vector<uintptr_t> results;
-    results.reserve(total2);
-    for (auto& v : threadResults)
-        results.insert(results.end(), v.begin(), v.end());
-    return results;
+    return mergeThreadResults(threadResults);
 }
 
 // ============================================================
@@ -270,7 +267,7 @@ std::vector<uintptr_t> SearchEngine::searchStringUTF16(const SearchParams& param
         return searchPattern(params, pattern, mask);
     }
 
-    // 大小写不敏感 — parallelScan + 自定义 checker
+    // 大小写不敏感 — 逐 uint16 重建 + ASCII tolower
     const size_t patLen3 = pattern.size();
     std::vector<std::vector<uintptr_t>> threadResults3;
     auto checker3 = [&](uintptr_t base, const uint8_t* buffer, size_t bufSize,
@@ -280,22 +277,12 @@ std::vector<uintptr_t> SearchEngine::searchStringUTF16(const SearchParams& param
             for (size_t j = 0; j < patLen3; j += 2) {
                 uint16_t val = (uint16_t)(buffer[i+j] | (buffer[i+j+1] << 8));
                 uint16_t exp = (uint16_t)(pattern[j] | (pattern[j+1] << 8));
-                if (!caseSensitive && val < 128 && exp < 128) {
-                    val = (uint16_t)std::tolower((int)val);
-                    exp = (uint16_t)std::tolower((int)exp);
-                }
+                if (val < 128) val = (uint16_t)std::tolower((int)val);
                 if (val != exp) { match = false; break; }
             }
             if (match) out.push_back(base + i);
         }
     };
     parallelScan(params, checker3, threadResults3);
-
-    size_t total3 = 0;
-    for (auto& v : threadResults3) total3 += v.size();
-    std::vector<uintptr_t> results;
-    results.reserve(total3);
-    for (auto& v : threadResults3)
-        results.insert(results.end(), v.begin(), v.end());
-    return results;
+    return mergeThreadResults(threadResults3);
 }
