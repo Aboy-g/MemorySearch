@@ -431,7 +431,7 @@ inline size_t FuzzySearch::filterCompare(CompareOp op, T ref) {
     });
 }
 
-// ── scanAllRegions (并行版) ──────────────────────────────
+// ── scanAllRegions ──────────────────────────────────────
 template <typename T>
 inline void FuzzySearch::scanAllRegions(
     const std::vector<ProcMap>& maps, const SearchParams& params,
@@ -441,77 +441,32 @@ inline void FuzzySearch::scanAllRegions(
     const size_t typeSz = sizeof(T);
     const size_t step = typeSz;
     const size_t CHUNK = m_cfg.chunkSize;
+    std::vector<uint8_t> buf(CHUNK + typeSz - 1);
 
-    // 过滤有效区域
-    std::vector<const ProcMap*> validMaps;
+    size_t totalBytes = 0;
     for (const auto& m : maps) {
         if (!m.isValid() || !m.readable) continue;
         uint32_t t = static_cast<uint32_t>(m.getMemType());
         if (params.memTypeMask != 0 && (t & params.memTypeMask) == 0) continue;
-        validMaps.push_back(&m);
-    }
-    if (validMaps.empty()) return;
 
-    unsigned int threads = std::thread::hardware_concurrency();
-    if (threads == 0) threads = 4;
-    threads = std::min(threads, (unsigned int)validMaps.size());
+        uintptr_t cur = m.startAddress;
+        uintptr_t end = m.endAddress;
+        uintptr_t rem = cur % typeSz;
+        if (rem != 0) cur += (typeSz - rem);
 
-    // 线程局部结果
-    struct TL { BulkResults<T> res; size_t bytes = 0; };
-    std::vector<TL> threadData(threads);
-    size_t perThread = maxCount / threads;
-    for (auto& td : threadData) td.res.reserve(perThread + 65536);
-
-    std::atomic<size_t> nextIdx{0};
-    std::atomic<size_t> totalBytes{0};
-
-    auto worker = [&](int) {
-        std::vector<uint8_t> buf(CHUNK + typeSz - 1);
-        while (true) {
-            size_t idx = nextIdx.fetch_add(1);
-            if (idx >= validMaps.size()) break;
-
-            const auto& m = *validMaps[idx];
-            uintptr_t cur = m.startAddress;
-            uintptr_t end = m.endAddress;
-            uintptr_t rem = cur % typeSz;
-            if (rem != 0) cur += (typeSz - rem);
-
-            // 找到本线程的结果容器
-            TL* tl = nullptr;
-            for (auto& td : threadData) {
-                if (td.res.size() < perThread + 65536) { tl = &td; break; }
+        while (cur + typeSz <= end && out.size() < maxCount) {
+            size_t toRead = std::min(CHUNK + typeSz - 1,
+                                     static_cast<size_t>(end - cur));
+            if (!m_mem.read(cur, buf.data(), toRead)) {
+                cur += 4096; continue;
             }
-            if (!tl) break;
-
-            while (cur + typeSz <= end && out.size() < maxCount) {
-                size_t toRead = std::min(CHUNK + typeSz - 1,
-                                         static_cast<size_t>(end - cur));
-                if (!m_mem.read(cur, buf.data(), toRead)) {
-                    cur += 4096; continue;
-                }
-                totalBytes.fetch_add(toRead, std::memory_order_relaxed);
-                tl->res.appendFromBuffer(cur, buf.data(), toRead, typeSz, step,
-                                         maxCount - out.size());
-                cur += CHUNK;
-            }
+            totalBytes += toRead;
+            out.appendFromBuffer(cur, buf.data(), toRead, typeSz, step, maxCount);
+            cur += CHUNK;
         }
-    };
-
-    // 启动线程
-    std::vector<std::thread> threadPool;
-    threadPool.reserve(threads);
-    for (unsigned int i = 0; i < threads; ++i)
-        threadPool.emplace_back(worker, i);
-    for (auto& t : threadPool) t.join();
-
-    // 合并结果
-    out.clear();
-    for (auto& td : threadData)
-        for (size_t i = 0; i < td.res.size() && out.size() < maxCount; i++)
-            out.append(td.res.addr(i), td.res.value(i));
-
-    m_stats.totalScanned = totalBytes.load();
+        if (out.size() >= maxCount) break;
+    }
+    m_stats.totalScanned = totalBytes;
 }
 
 // ── refineFromRegions ───────────────────────────────────
