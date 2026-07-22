@@ -660,9 +660,10 @@ static void searchEqFast(const SearchParams& params, MemBase& mem,
                           T value, std::vector<SearchResult<T>>& results,
                           const SearchEngine::ProgressCallback& progressCb,
                           SearchStats& stats) {
-    const uint8_t* vb = reinterpret_cast<const uint8_t*>(&value);
+    std::vector<uint8_t> pattern(sizeof(T));
+    memcpy(pattern.data(), &value, sizeof(T));
     FastSearch::OptimizedPatternSearch os;
-    os.init(std::vector<uint8_t>(vb, vb + sizeof(T)).data(), sizeof(T));
+    os.init(pattern.data(), sizeof(T));
     const size_t MAX_M = 131072;
     parallelValueScan<T>(params, mem, [&](uintptr_t base, const uint8_t* buf, size_t sz,
                            std::vector<SearchResult<T>>& out, std::atomic<size_t>& tres) {
