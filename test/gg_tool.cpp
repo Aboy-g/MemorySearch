@@ -137,10 +137,12 @@ private:
         while (ss >> t) r.push_back(t); return r;
     }
 
+    size_t totalSize() const { return totalSize() > 0 ? totalSize() : tmpAddrs.size(); }
     void showBar() {
+        size_t n = totalSize();
         printf(GRY "  [%s|%s] " RST "%s" RST "\n",
                tname(vtype), rname(sp.memTypeMask),
-               fuzzy.size() > 0 ? (BLD + fmtN(fuzzy.size())).c_str() : "0");
+               n > 0 ? (BLD + fmtN(n)).c_str() : "0");
     }
 
     void help() {
@@ -241,7 +243,7 @@ private:
             auto t1 = std::chrono::high_resolution_clock::now();
             double ms = std::chrono::duration<double, std::milli>(t1 - t0).count();
             printf("\r" GRN "  ✓ %s 条 | %s | 快照已创建\n" RST,
-                   fmtN(fuzzy.size()).c_str(), fmtTime(ms).c_str());
+                   fmtN(totalSize()).c_str(), fmtTime(ms).c_str());
         });
     }
 
@@ -252,7 +254,7 @@ private:
         auto t1 = std::chrono::high_resolution_clock::now();
         double ms = std::chrono::duration<double, std::milli>(t1 - t0).count();
         printf("\r" GRN "  ✓ %s 条 | %s | 快照已创建\n" RST,
-               fmtN(fuzzy.size()).c_str(), fmtTime(ms).c_str());
+               fmtN(totalSize()).c_str(), fmtTime(ms).c_str());
     }
 
     void searchCompare(const std::vector<std::string>& parts) {
@@ -316,12 +318,12 @@ private:
 
     // ==================== 精炼 ====================
     void refine(const std::vector<std::string>& parts) {
-        if (fuzzy.size() == 0 && fuzzy.phase() != FuzzySearch::Phase::REGION_SNAPSHOT) {
+        if (totalSize() == 0 && fuzzy.phase() != FuzzySearch::Phase::REGION_SNAPSHOT) {
             printf(RED "  先搜索 (s/u)\n" RST); return;
         }
         if (parts.size() < 2) { printf("  f +|-|~|=|<val>|>N|<N\n"); return; }
         auto op = parts[1];
-        size_t before = fuzzy.size();
+        size_t before = totalSize();
         if (fuzzy.phase() == FuzzySearch::Phase::REGION_SNAPSHOT && before == 0)
             before = fuzzy.stats().phase1Results;
 
@@ -343,20 +345,20 @@ private:
         }
         auto t1 = std::chrono::high_resolution_clock::now();
         double ms = std::chrono::duration<double, std::milli>(t1 - t0).count();
-        printf(GRN "  ✓ %s → %s 条 | %s\n" RST, fmtN(before).c_str(), fmtN(fuzzy.size()).c_str(), fmtTime(ms).c_str());
-        if (fuzzy.size() <= 20 && fuzzy.size() > 0) showResults({"l"});
+        printf(GRN "  ✓ %s → %s 条 | %s\n" RST, fmtN(before).c_str(), fmtN(totalSize()).c_str(), fmtTime(ms).c_str());
+        if (totalSize() <= 20 && totalSize() > 0) showResults({"l"});
     }
 
     void filterOffset(const std::vector<std::string>& parts) {
-        if (fuzzy.size() == 0) { printf(RED "  先搜索\n" RST); return; }
+        if (totalSize() == 0) { printf(RED "  先搜索\n" RST); return; }
         if (parts.size() < 4) { printf("  offset <N> EQ|GT|LT <value>\n"); return; }
         int off; if (!parse(parts[1], off)) { printf(RED "  无效\n" RST); return; }
 
-        size_t before = fuzzy.size(), after = 0;
+        size_t before = totalSize(), after = 0;
         callTyped([&](auto d) {
             using T = decltype(d); T v; if (!parse(parts[3], v)) return;
             // 逐地址读 addr+offset, 过滤
-            for (size_t i = 0; i < fuzzy.size(); i++) {
+            for (size_t i = 0; i < totalSize(); i++) {
                 T val = mem.Read<T>(addrAt(i) + off);
                 if (val == v) after++;
             }
@@ -367,7 +369,7 @@ private:
 
     // ==================== 显示/操作 ====================
     void showResults(const std::vector<std::string>& parts) {
-        size_t n = fuzzy.size();
+        size_t n = totalSize();
         if (n == 0) { printf("  (无结果)\n"); return; }
         int show = 20; if (parts.size() >= 2) parse(parts[1], show);
         show = std::min(show, (int)n);
@@ -380,10 +382,10 @@ private:
     }
 
     void cmdWrite(const std::vector<std::string>& parts) {
-        if (fuzzy.size() == 0) { printf(RED "  无结果\n" RST); return; }
+        if (totalSize() == 0) { printf(RED "  无结果\n" RST); return; }
         if (parts.size() < 2) { printf("  w <value> | w <index> <value>\n"); return; }
         if (parts.size() >= 3) {
-            int idx; if (!parse(parts[1], idx) || idx < 1 || (size_t)idx > fuzzy.size())
+            int idx; if (!parse(parts[1], idx) || idx < 1 || (size_t)idx > totalSize())
             { printf(RED "  无效索引\n" RST); return; }
             callTyped([&](auto d) {
                 using T = decltype(d); T v; if (!parse(parts[2], v)) return;
@@ -393,17 +395,17 @@ private:
         } else {
             callTyped([&](auto d) {
                 using T = decltype(d); T v; if (!parse(parts[1], v)) return;
-                for (size_t i = 0; i < fuzzy.size(); i++) fuzzy.setValueAt<T>(i, v);
+                for (size_t i = 0; i < totalSize(); i++) fuzzy.setValueAt<T>(i, v);
                 fuzzy.writeBack<T>();
             });
-            printf(GRN "  ✓ 已修改 %s 条并写回\n" RST, fmtN(fuzzy.size()).c_str());
+            printf(GRN "  ✓ 已修改 %s 条并写回\n" RST, fmtN(totalSize()).c_str());
         }
     }
 
     void verifyAddr(const std::vector<std::string>& parts) {
-        if (fuzzy.size() == 0) { printf("  (无结果)\n"); return; }
+        if (totalSize() == 0) { printf("  (无结果)\n"); return; }
         int n = 5; if (parts.size() >= 2) parse(parts[1], n);
-        n = std::min(n, (int)fuzzy.size());
+        n = std::min(n, (int)totalSize());
         printf("  当前值 vs 快照 (前%d):\n", n);
         for (int i = 0; i < n; i++) {
             uintptr_t a = addrAt(i);
@@ -449,11 +451,11 @@ private:
     void showStats() { search.lastStats().print(); }
 
     void cmdExport(const std::vector<std::string>& parts) {
-        if (fuzzy.size() == 0) { printf("  (无结果)\n"); return; }
+        if (totalSize() == 0) { printf("  (无结果)\n"); return; }
         std::string fn = "addrs.txt"; if (parts.size() >= 2) fn = parts[1];
         std::ofstream f(fn); if (!f) { printf(RED "  无法创建\n" RST); return; }
-        for (size_t i = 0; i < fuzzy.size(); i++) f << "0x" << std::hex << addrAt(i) << std::dec << "\n";
-        printf(GRN "  ✓ %s 地址 → %s\n" RST, fmtN(fuzzy.size()).c_str(), fn.c_str());
+        for (size_t i = 0; i < totalSize(); i++) f << "0x" << std::hex << addrAt(i) << std::dec << "\n";
+        printf(GRN "  ✓ %s 地址 → %s\n" RST, fmtN(totalSize()).c_str(), fn.c_str());
     }
 
     // ==================== 演示 ====================
@@ -463,7 +465,7 @@ private:
         // 1. 精确值
         printf(GRY "  [1/7] 精确值搜索 int=100\n" RST);
         { auto t0 = now(); auto r = search.search<int>(sp, 100);
-            printf("    ✓ %zu 结果 | %s\n", r.size(), fmtTime(now()-t0).c_str()); }
+            printf("    ✓ %s 结果 | %s\n", fmtN(r.size()).c_str(), fmtTime(now()-t0).c_str()); }
 
         // 2. 模糊搜索
         printf(GRY "  [2/7] 模糊搜索 int>999999\n" RST);
@@ -488,8 +490,8 @@ private:
         // 6. 模糊搜索流程
         printf(GRY "  [6/7] 模糊搜索: s 100 → f =\n" RST);
         { fuzzy.searchValue<int>(sp, 100, bar); printf("\r");
-            size_t b = fuzzy.size(); fuzzy.refine<int>(CompareOp::UNCHANGED);
-            printf("    s 100: %s 条 → f =: %s 条\n", fmtN(b).c_str(), fmtN(fuzzy.size()).c_str()); }
+            size_t b = totalSize(); fuzzy.refine<int>(CompareOp::UNCHANGED);
+            printf("    s 100: %s 条 → f =: %s 条\n", fmtN(b).c_str(), fmtN(totalSize()).c_str()); }
 
         // 7. 性能
         printf(GRY "  [7/7] 性能统计\n" RST);
@@ -514,11 +516,20 @@ private:
                          case VType::DOUBLE: { double d{}; fn(d); break; } }
     }
 
-    template <typename T> void convertResults(const ResultSet<T>& rs) {
-        if constexpr (std::is_same_v<T, int32_t> || std::is_same_v<T, int64_t> ||
-                      std::is_same_v<T, float> || std::is_same_v<T, double>)
-            fuzzy.searchValue<T>(sp, rs.size() > 0 ? rs[0].value : T{}, nullptr);
+    // ── 比较/范围搜索结果临时存储 ──
+    template <typename T>
+    void storeResults(const ResultSet<T>& rs) {
+        fuzzy.reset();
+        tmpAddrs.clear(); tmpVals.clear();
+        size_t n = std::min(rs.size(), (size_t)100000);
+        if (n < rs.size()) printf(YEL "  ⚠ %s→%s 条 (截断)\n" RST, fmtN(rs.size()).c_str(), fmtN(n).c_str());
+        for (size_t i = 0; i < n; i++) {
+            tmpAddrs.push_back(rs[i].address);
+            tmpVals.push_back(rs[i].value);
+        }
     }
+    std::vector<uintptr_t> tmpAddrs;
+    std::vector<int64_t> tmpVals;  // 用最大类型存
 
     uintptr_t addrAt(size_t i) {
         switch (vtype) { case VType::DWORD: return fuzzy.addrAt<int32_t>(i);
