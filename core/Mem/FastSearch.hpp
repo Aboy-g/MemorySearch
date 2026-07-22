@@ -240,63 +240,6 @@ private:
     bool m_hasMask = false;
 };
 
-// ----------------------------------------------------------
-// 快速值搜索 — 针对特定大小的值优化
-// ----------------------------------------------------------
-template <typename T>
-inline size_t find_values(const uint8_t* buffer, size_t bufSize,
-                           T value, uintptr_t* out, size_t maxOut,
-                           bool align = true) {
-    const size_t typeSize = sizeof(T);
-    const size_t step = align ? typeSize : 1;
-    size_t count = 0;
-
-    if (typeSize == 4) {
-        uint32_t val32;
-        memcpy(&val32, &value, 4);
-        const size_t limit = (bufSize >= 4) ? (bufSize - 3) : 0;
-        const uint8_t* p = buffer;
-        size_t offset = 0;
-
-        while (offset < limit && count < maxOut) {
-            // 快速路径：逐 4 字节比较
-            uint32_t actual;
-            memcpy(&actual, p + offset, 4);
-            if (actual == val32) {
-                out[count++] = offset;
-                offset += step;
-            } else {
-                offset += step;
-            }
-        }
-    } else if (typeSize == 8) {
-        uint64_t val64;
-        memcpy(&val64, &value, 8);
-        const size_t limit = (bufSize >= 8) ? (bufSize - 7) : 0;
-        size_t offset = 0;
-        while (offset < limit && count < maxOut) {
-            uint64_t actual;
-            memcpy(&actual, buffer + offset, 8);
-            if (actual == val64) {
-                out[count++] = offset;
-                offset += step;
-            } else {
-                offset += step;
-            }
-        }
-    } else {
-        // 通用大小
-        size_t offset = 0;
-        while (offset + typeSize <= bufSize && count < maxOut) {
-            if (memcmp(buffer + offset, &value, typeSize) == 0) {
-                out[count++] = offset;
-            }
-            offset += step;
-        }
-    }
-    return count;
-}
-
 } // namespace FastSearch
 
 #endif // FASTSEARCH_HPP

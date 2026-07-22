@@ -912,10 +912,7 @@ inline ResultSet<T> SearchEngine::searchCompare(const SearchParams& params,
         break;
 
     case CompareOp::RANGE:
-        // RANGE should use searchRange, but provide fallback
-        searchGeneric<T>(params, m_mem,
-            [reference](T v) { return v >= reference && v <= reference; },
-            results, progressCb, m_stats);
+        throw SearchException("Use searchRange() for range queries");
         break;
 
     case CompareOp::CHANGED:
