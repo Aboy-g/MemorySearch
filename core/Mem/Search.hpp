@@ -562,182 +562,19 @@ inline void SearchEngine::parallelScan(
     updateStats(t0, t1, totalBytesRead.load(), totalBytes, totalRes, numThreads);
 }
 
-// ── 快速路径: EQ 搜索 (使用 BMH+SIMD 优化的字节匹配) ──
-template <typename T>
-static bool searchEqFast(const SearchParams& params, MemBase& mem,
-                          T value, std::vector<SearchResult<T>>& results,
-                          const SearchEngine::ProgressCallback& progressCb,
-                          SearchStats& stats)
-{
+// ── 共享: 并行值搜索框架 ──────────────────────────────
+// ChunkFunc: void(uintptr_t base, const uint8_t* buf, size_t bufSize,
+//                 std::vector<SearchResult<T>>& out, std::atomic<size_t>& total)
+template <typename T, typename ChunkFunc>
+static void parallelValueScan(const SearchParams& params, MemBase& mem,
+                               ChunkFunc&& processChunk,
+                               std::vector<SearchResult<T>>& results,
+                               const SearchEngine::ProgressCallback& progressCb,
+                               SearchStats& stats) {
     using Result = SearchResult<T>;
     const size_t typeSize = sizeof(T);
-    const size_t step = params.align ? typeSize : 1;
-
-    // 构建字节模式
-    const uint8_t* valBytes = reinterpret_cast<const uint8_t*>(&value);
-    std::vector<uint8_t> pattern(valBytes, valBytes + typeSize);
-
-    FastSearch::OptimizedPatternSearch optSearch;
-    optSearch.init(pattern.data(), typeSize);
-
-    const size_t MAX_PER_CHUNK = 131072;
-
-    // checker: 在 buffer 中找匹配，存储完整 Result
-    struct ThreadLocal {
-        std::vector<Result> results;
-        std::vector<uint8_t> valueBuffer;  // 存储每个匹配的 T 值
-    };
-
-    // 构造 ranges (使用共享函数)
     auto ranges = buildSearchRanges(mem, params);
-    if (ranges.empty()) { stats.elapsedMs = 0; return true; }
-
-    const size_t CHUNK_SIZE = params.effectiveChunkSize();
-
-    size_t totalBytes = 0;
-    for (const auto& r : ranges) totalBytes += (r.end - r.start);
-
-    unsigned int numThreads = params.numThreads;
-    if (numThreads == 0) {
-        numThreads = std::thread::hardware_concurrency();
-        if (numThreads == 0) numThreads = 4;
-    }
-    numThreads = std::min(numThreads, static_cast<unsigned int>(ranges.size()));
-
-    std::vector<ThreadLocal> threadData(numThreads);
-    for (auto& td : threadData) td.results.reserve(65536);
-
-    std::atomic<size_t> nextIdx{0};
-    std::atomic<size_t> totalBytesRead{0};
-    std::atomic<bool> cancelled{false};
-    std::atomic<size_t> totalResults{0};
-    const size_t maxResults = params.maxResults;
-
-    auto worker = [&](int tid) {
-        std::vector<uint8_t> buffer(CHUNK_SIZE + typeSize - 1);
-        thread_local std::vector<uintptr_t> tlsMatchBuf;
-        if (tlsMatchBuf.size() < MAX_PER_CHUNK)
-            tlsMatchBuf.resize(MAX_PER_CHUNK);
-
-        auto& localResults = threadData[tid].results;
-
-        while (!cancelled.load()) {
-            if (maxResults > 0 && totalResults.load() >= maxResults) break;
-
-            size_t idx = nextIdx.fetch_add(1);
-            if (idx >= ranges.size()) break;
-
-            const auto& range = ranges[idx];
-            uintptr_t cur = range.start;
-            uintptr_t end = range.end;
-            if (params.align) {
-                uintptr_t rem = cur % typeSize;
-                if (rem != 0) cur += (typeSize - rem);
-            }
-
-            while (cur < end && !cancelled.load()) {
-                if (maxResults > 0 && totalResults.load() >= maxResults) break;
-
-                size_t toRead = std::min(CHUNK_SIZE + typeSize - 1,
-                                         static_cast<size_t>(end - cur));
-                if (!mem.read(cur, buffer.data(), toRead)) {
-                    cur += 4096;
-                    continue;
-                }
-                totalBytesRead.fetch_add(toRead, std::memory_order_relaxed);
-
-                size_t found = optSearch.search(buffer.data(), toRead,
-                                                tlsMatchBuf.data(), MAX_PER_CHUNK);
-                for (size_t k = 0; k < found; k++) {
-                    if (maxResults > 0 && totalResults.load() >= maxResults) break;
-
-                    uintptr_t offset = tlsMatchBuf[k];
-                    if (params.align && ((cur + offset) % typeSize != 0)) continue;
-                    if (step != 1 && (offset % step != 0)) continue;
-
-                    T val;
-                    memcpy(&val, buffer.data() + offset, typeSize);
-                    localResults.push_back({cur + offset, val});
-                }
-                if (maxResults > 0)
-                    totalResults.fetch_add(found, std::memory_order_relaxed);
-
-                cur += std::min(CHUNK_SIZE, static_cast<size_t>(end - cur));
-            }
-        }
-    };
-
-    auto t0 = std::chrono::high_resolution_clock::now();
-
-    std::vector<std::thread> threads;
-    threads.reserve(numThreads);
-    for (unsigned int i = 0; i < numThreads; ++i)
-        threads.emplace_back(worker, i);
-
-    // 进度线程
-    std::thread progressThread;
-    if (progressCb) {
-        progressThread = std::thread([&]() {
-            while (!cancelled.load()) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(200));
-                size_t done = nextIdx.load();
-                if (done >= ranges.size()) break;
-                double p = std::min(1.0, static_cast<double>(done) / ranges.size());
-                if (!progressCb(p)) { cancelled.store(true); break; }
-            }
-        });
-    }
-
-    for (auto& t : threads) t.join();
-    cancelled.store(true);
-    if (progressThread.joinable()) progressThread.join();
-
-    auto t1 = std::chrono::high_resolution_clock::now();
-
-    // 合并结果
-    size_t total = 0;
-    for (const auto& td : threadData) total += td.results.size();
-    results.reserve(total);
-    bool didTruncate = false;
-    size_t added = 0;
-    for (auto& td : threadData) {
-        for (auto& r : td.results) {
-            if (maxResults > 0 && added >= maxResults) {
-                didTruncate = true;
-                break;
-            }
-            results.push_back(std::move(r));
-            added++;
-        }
-        if (didTruncate) break;
-    }
-
-    double elapsedMs = std::chrono::duration<double, std::milli>(t1 - t0).count();
-    stats.elapsedMs    = elapsedMs;
-    stats.totalBytes   = totalBytes;
-    stats.bytesRead    = totalBytesRead.load();
-    stats.resultCount  = results.size();
-    stats.throughputMBs = (elapsedMs > 0)
-        ? (stats.bytesRead / (1024.0 * 1024.0)) / (elapsedMs / 1000.0) : 0;
-    stats.numThreads   = numThreads;
-
-    return !didTruncate;
-}
-
-// ── 泛用路径: 逐值比较搜索 (用于 NEQ, GT, LT, RANGE 等) ──
-template <typename T, typename JudgeFunc>
-static void searchGeneric(const SearchParams& params, MemBase& mem,
-                           JudgeFunc&& judge,
-                           std::vector<SearchResult<T>>& results,
-                           const SearchEngine::ProgressCallback& progressCb,
-                           SearchStats& stats)
-{
-    using Result = SearchResult<T>;
-    const size_t typeSize = sizeof(T);
-    const size_t step = params.align ? typeSize : 1;
-
-    auto ranges = buildSearchRanges(mem, params);
-    if (ranges.empty()) return;
+    if (ranges.empty()) { stats.elapsedMs = 0; return; }
 
     const size_t CHUNK_SIZE = params.effectiveChunkSize();
     size_t totalBytes = 0;
@@ -750,70 +587,39 @@ static void searchGeneric(const SearchParams& params, MemBase& mem,
     }
     numThreads = std::min(numThreads, static_cast<unsigned int>(ranges.size()));
 
-    struct ThreadLocal {
-        std::vector<Result> results;
-    };
-    std::vector<ThreadLocal> threadData(numThreads);
+    struct TL { std::vector<Result> results; };
+    std::vector<TL> threadData(numThreads);
     for (auto& td : threadData) td.results.reserve(65536);
 
-    std::atomic<size_t> nextIdx{0};
-    std::atomic<size_t> totalBytesRead{0};
+    std::atomic<size_t> nextIdx{0}, totalBytesRead{0}, totalResults{0};
     std::atomic<bool> cancelled{false};
-    std::atomic<size_t> totalResults{0};
     const size_t maxResults = params.maxResults;
 
     auto worker = [&](int tid) {
         std::vector<uint8_t> buffer(CHUNK_SIZE + typeSize - 1);
-        auto& localResults = threadData[tid].results;
-
+        auto& out = threadData[tid].results;
         while (!cancelled.load()) {
             if (maxResults > 0 && totalResults.load() >= maxResults) break;
-
             size_t idx = nextIdx.fetch_add(1);
             if (idx >= ranges.size()) break;
-
             const auto& range = ranges[idx];
-            uintptr_t cur = range.start;
-            uintptr_t end = range.end;
-            if (params.align) {
-                uintptr_t rem = cur % typeSize;
-                if (rem != 0) cur += (typeSize - rem);
-            }
-
+            uintptr_t cur = range.start, end = range.end;
+            if (params.align) { uintptr_t rem = cur % typeSize; if (rem) cur += typeSize - rem; }
             while (cur < end && !cancelled.load()) {
                 if (maxResults > 0 && totalResults.load() >= maxResults) break;
-
-                size_t toRead = std::min(CHUNK_SIZE + typeSize - 1,
-                                         static_cast<size_t>(end - cur));
-                if (!mem.read(cur, buffer.data(), toRead)) {
-                    cur += 4096;
-                    continue;
-                }
+                size_t toRead = std::min(CHUNK_SIZE + typeSize - 1, static_cast<size_t>(end - cur));
+                if (!mem.read(cur, buffer.data(), toRead)) { cur += 4096; continue; }
                 totalBytesRead.fetch_add(toRead, std::memory_order_relaxed);
-
-                size_t limit = toRead - typeSize + 1;
-                for (size_t offset = 0; offset < limit; offset += step) {
-                    if (maxResults > 0 && totalResults.load() >= maxResults) break;
-
-                    T val;
-                    memcpy(&val, buffer.data() + offset, typeSize);
-                    if (judge(val)) {
-                        localResults.push_back({cur + offset, val});
-                        if (maxResults > 0)
-                            totalResults.fetch_add(1, std::memory_order_relaxed);
-                    }
-                }
+                processChunk(cur, buffer.data(), toRead, out, totalResults);
                 cur += std::min(CHUNK_SIZE, static_cast<size_t>(end - cur));
             }
         }
     };
 
     auto t0 = std::chrono::high_resolution_clock::now();
-
     std::vector<std::thread> threads;
     threads.reserve(numThreads);
-    for (unsigned int i = 0; i < numThreads; ++i)
-        threads.emplace_back(worker, i);
+    for (unsigned int i = 0; i < numThreads; ++i) threads.emplace_back(worker, i);
 
     std::thread progressThread;
     if (progressCb) {
@@ -822,40 +628,73 @@ static void searchGeneric(const SearchParams& params, MemBase& mem,
                 std::this_thread::sleep_for(std::chrono::milliseconds(200));
                 size_t done = nextIdx.load();
                 if (done >= ranges.size()) break;
-                double p = std::min(1.0, static_cast<double>(done) / ranges.size());
-                if (!progressCb(p)) { cancelled.store(true); break; }
+                if (!progressCb(std::min(1.0, (double)done / ranges.size())))
+                { cancelled.store(true); break; }
             }
         });
     }
-
     for (auto& t : threads) t.join();
     cancelled.store(true);
     if (progressThread.joinable()) progressThread.join();
-
     auto t1 = std::chrono::high_resolution_clock::now();
 
     // 合并
     size_t total = 0;
     for (const auto& td : threadData) total += td.results.size();
     results.reserve(std::min(total, maxResults > 0 ? maxResults : total));
-    size_t added = 0;
-    for (auto& td : threadData) {
-        for (auto& r : td.results) {
-            if (maxResults > 0 && added >= maxResults) break;
-            results.push_back(std::move(r));
-            added++;
-        }
-        if (maxResults > 0 && added >= maxResults) break;
-    }
+    for (auto& td : threadData)
+        for (auto& r : td.results)
+            if (maxResults == 0 || results.size() < maxResults)
+                results.push_back(std::move(r));
 
     double elapsedMs = std::chrono::duration<double, std::milli>(t1 - t0).count();
-    stats.elapsedMs    = elapsedMs;
-    stats.totalBytes   = totalBytes;
-    stats.bytesRead    = totalBytesRead.load();
-    stats.resultCount  = results.size();
-    stats.throughputMBs = (elapsedMs > 0)
-        ? (stats.bytesRead / (1024.0 * 1024.0)) / (elapsedMs / 1000.0) : 0;
-    stats.numThreads   = numThreads;
+    stats.elapsedMs = elapsedMs; stats.totalBytes = totalBytes;
+    stats.bytesRead = totalBytesRead.load(); stats.resultCount = results.size();
+    stats.throughputMBs = (elapsedMs > 0) ? (stats.bytesRead / (1024.0*1024.0)) / (elapsedMs/1000.0) : 0;
+    stats.numThreads = numThreads;
+}
+
+// ── 精确值搜索 (BMH) ──────────────────────────────────
+template <typename T>
+static void searchEqFast(const SearchParams& params, MemBase& mem,
+                          T value, std::vector<SearchResult<T>>& results,
+                          const SearchEngine::ProgressCallback& progressCb,
+                          SearchStats& stats) {
+    const uint8_t* vb = reinterpret_cast<const uint8_t*>(&value);
+    FastSearch::OptimizedPatternSearch os;
+    os.init(std::vector<uint8_t>(vb, vb + sizeof(T)).data(), sizeof(T));
+    const size_t MAX_M = 131072;
+    parallelValueScan<T>(params, mem, [&](uintptr_t base, const uint8_t* buf, size_t sz,
+                           std::vector<SearchResult<T>>& out, std::atomic<size_t>& tres) {
+        thread_local std::vector<uintptr_t> mb;
+        if (mb.size() < MAX_M) mb.resize(MAX_M);
+        size_t n = os.search(buf, sz, mb.data(), MAX_M);
+        for (size_t k = 0; k < n; k++) {
+            uintptr_t addr = base + mb[k];
+            if (params.align && (addr % sizeof(T) != 0)) continue;
+            T v; memcpy(&v, buf + mb[k], sizeof(T));
+            out.push_back({addr, v});
+        }
+        tres.fetch_add(n, std::memory_order_relaxed);
+    }, results, progressCb, stats);
+}
+
+// ── 逐值比较搜索 (NEQ/GT/LT/RANGE) ────────────────────
+template <typename T, typename JudgeFunc>
+static void searchGeneric(const SearchParams& params, MemBase& mem,
+                           JudgeFunc&& judge,
+                           std::vector<SearchResult<T>>& results,
+                           const SearchEngine::ProgressCallback& progressCb,
+                           SearchStats& stats) {
+    const size_t ts = sizeof(T), step = params.align ? ts : 1;
+    parallelValueScan<T>(params, mem, [&](uintptr_t base, const uint8_t* buf, size_t sz,
+                           std::vector<SearchResult<T>>& out, std::atomic<size_t>& tres) {
+        size_t limit = sz - ts + 1;
+        for (size_t off = 0; off < limit; off += step) {
+            T v; memcpy(&v, buf + off, ts);
+            if (judge(v)) { out.push_back({base + off, v}); tres.fetch_add(1, std::memory_order_relaxed); }
+        }
+    }, results, progressCb, stats);
 }
 
 // ── 精确值搜索 ───────────────────────────────────────
