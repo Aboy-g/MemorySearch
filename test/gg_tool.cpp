@@ -558,20 +558,24 @@ private:
                          case VType::DOUBLE: { double d{}; fn(d); break; } }
     }
 
-    // ── 比较/范围搜索结果临时存储 ──
+    // ── 比较/范围搜索结果存储 (不截断, 全部保存) ──
     template <typename T>
     void storeResults(const ResultSet<T>& rs) {
         fuzzy.reset();
         tmpAddrs.clear(); tmpVals.clear();
-        size_t n = std::min(rs.size(), (size_t)100000);
-        if (n < rs.size()) printf(YEL "  ⚠ %s→%s 条 (截断)\n" RST, fmtN(rs.size()).c_str(), fmtN(n).c_str());
+        size_t n = rs.size();
+        size_t memEst = n * (sizeof(uintptr_t) + sizeof(T));
+        if (memEst > 500 * 1024 * 1024)
+            printf(YEL "  ⚠ %s 条, 预计内存 %s\n" RST, fmtN(n).c_str(), fmtS(memEst).c_str());
+        tmpAddrs.reserve(n);
+        tmpVals.reserve(n);
         for (size_t i = 0; i < n; i++) {
             tmpAddrs.push_back(rs[i].address);
             tmpVals.push_back(rs[i].value);
         }
     }
     std::vector<uintptr_t> tmpAddrs;
-    std::vector<int64_t> tmpVals;  // 用最大类型存
+    std::vector<int64_t> tmpVals;
 
     uintptr_t addrAt(size_t i) {
         if (fuzzy.size() > 0) {
