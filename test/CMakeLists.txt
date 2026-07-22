@@ -44,6 +44,15 @@ target_link_libraries(fuzzy_tool
         Mem
 )
 
+add_executable(gg_tool
+        gg_tool.cpp
+)
+
+target_link_libraries(gg_tool
+        PRIVATE
+        Mem
+)
+
 target_link_libraries(mmap_bench
         PRIVATE
         Mem
