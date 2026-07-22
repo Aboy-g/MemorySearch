@@ -358,6 +358,23 @@ private:
                 }
             });
             tmpAddrs.swap(newA); tmpVals.swap(newV);
+        } else if (fuzzy.phase() == FuzzySearch::Phase::REGION_SNAPSHOT) {
+            // 区域快照模式: 直接搜索, 不走filterCompare (BulkResults为空)
+            if (op.size() >= 2 && (op[0] == '>' || op[0] == '<')) {
+                std::string vs = op.substr(1);
+                callTyped([&](auto d) {
+                    using T = decltype(d); T v; parse(vs, v);
+                    auto r = search.searchCompare<T>(sp, v,
+                        op[0]=='>'?CompareOp::GT:CompareOp::LT, bar);
+                    printf("\r"); storeResults(r);
+                });
+            } else {
+                callTyped([&](auto d) {
+                    using T = decltype(d); T v; parse(op, v);
+                    auto r = search.search<T>(sp, v, bar);
+                    printf("\r"); storeResults(r);
+                });
+            }
         } else if (op == "+" || op == "-" || op == "~" || op == "=") {
             CompareOp cop = op == "+" ? CompareOp::INCREASED : op == "-" ? CompareOp::DECREASED
                           : op == "~" ? CompareOp::CHANGED : CompareOp::UNCHANGED;
