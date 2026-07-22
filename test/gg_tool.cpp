@@ -13,6 +13,7 @@
 #include <sstream>
 #include <atomic>
 #include <thread>
+#include <chrono>
 
 #define RST  "\033[0m"
 #define BLD  "\033[1m"
@@ -36,6 +37,10 @@ static std::string fmtN(size_t n) {
     if (n < 10000) return std::to_string(n);
     if (n < 1000000) { char b[32]; snprintf(b, 32, "%.1fK", n / 1000.0); return b; }
     char b[32]; snprintf(b, 32, "%.2fM", n / 1000000.0); return b;
+}
+static std::string fmtTime(double ms) {
+    if (ms < 1000) { char b[32]; snprintf(b, 32, "%.0fms", ms); return b; }
+    char b[32]; snprintf(b, 32, "%.2fs", ms / 1000); return b;
 }
 static std::string fmtS(size_t b) {
     const char* u[] = {"B", "KB", "MB", "GB"};
@@ -189,9 +194,11 @@ private:
             callTyped([&](auto dummy) {
                 using T = decltype(dummy);
                 T v; if (!parse(vs, v)) { printf(RED "  无效值\n" RST); return; }
+                auto t0 = std::chrono::high_resolution_clock::now();
                 auto r = search.searchCompare<T>(params, v, gt ? CompareOp::GT : CompareOp::LT, bar);
-                printf("\r" GRN "  ✓ %s 结果\n" RST, fmtN(r.size()).c_str());
-                storeResults(r);
+                auto t1 = std::chrono::high_resolution_clock::now();
+                double ms = std::chrono::duration<double, std::milli>(t1 - t0).count();
+                printf("\r" GRN "  ✓ %s 结果 | %s\n" RST, fmtN(r.size()).c_str(), fmtTime(ms).c_str());
             });
             return;
         }
@@ -200,8 +207,12 @@ private:
         callTyped([&](auto dummy) {
             using T = decltype(dummy);
             T v; if (!parse(op, v)) { printf(RED "  无效值\n" RST); return; }
+            auto t0 = std::chrono::high_resolution_clock::now();
             fuzzy.searchValue<T>(params, v, bar);
-            printf("\r" GRN "  ✓ %s 条 | 快照已创建\n" RST, fmtN(fuzzy.size()).c_str());
+            auto t1 = std::chrono::high_resolution_clock::now();
+            double ms = std::chrono::duration<double, std::milli>(t1 - t0).count();
+            printf("\r" GRN "  ✓ %s 条 | %s | 快照已创建\n" RST,
+                   fmtN(fuzzy.size()).c_str(), fmtTime(ms).c_str());
         });
     }
 
@@ -209,9 +220,13 @@ private:
         fuzzy.reset();
         callTyped([&](auto dummy) {
             using T = decltype(dummy);
+            auto t0 = std::chrono::high_resolution_clock::now();
             fuzzy.searchUnknown<T>(params, 0, bar);
+            auto t1 = std::chrono::high_resolution_clock::now();
+            double ms = std::chrono::duration<double, std::milli>(t1 - t0).count();
+            printf("\r" GRN "  ✓ %s 条 | %s | 快照已创建\n" RST,
+                   fmtN(fuzzy.size()).c_str(), fmtTime(ms).c_str());
         });
-        printf("\r" GRN "  ✓ %s 条 | 快照已创建\n" RST, fmtN(fuzzy.size()).c_str());
     }
 
     // ── 精炼 ──
@@ -226,6 +241,7 @@ private:
         if (fuzzy.phase() == FuzzySearch::Phase::REGION_SNAPSHOT && before == 0)
             before = fuzzy.stats().phase1Results;
 
+        auto t0 = std::chrono::high_resolution_clock::now();
         if (op == "+" || op == "-" || op == "~" || op == "=") {
             CompareOp cop = op == "+" ? CompareOp::INCREASED : op == "-" ? CompareOp::DECREASED
                           : op == "~" ? CompareOp::CHANGED : CompareOp::UNCHANGED;
@@ -245,7 +261,10 @@ private:
                 fuzzy.filterExact<T>(v);
             });
         }
-        printf(GRN "  ✓ %s → %s 条\n" RST, fmtN(before).c_str(), fmtN(fuzzy.size()).c_str());
+        auto t1 = std::chrono::high_resolution_clock::now();
+        double ms = std::chrono::duration<double, std::milli>(t1 - t0).count();
+        printf(GRN "  ✓ %s → %s 条 | %s\n" RST,
+               fmtN(before).c_str(), fmtN(fuzzy.size()).c_str(), fmtTime(ms).c_str());
         if (fuzzy.size() <= 20 && fuzzy.size() > 0) showResults({"l"});
     }
 
