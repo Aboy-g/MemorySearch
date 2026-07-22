@@ -86,7 +86,7 @@ public:
 
     void run() {
         printf(BLD CYN "\n  ▸ GameGuardian-style 修改器\n" RST);
-        printf(GRY "  s=搜索  r=精炼  l=列出  m=修改  w=写回  q=退出  ?=帮助\n\n" RST);
+        printf(GRY "  s=搜索  f=精炼  l=列出  w=修改并写回  c=清空  q=退出  ?=帮助\n\n" RST);
 
         while (true) {
             showLine();
@@ -106,8 +106,7 @@ public:
             else if (cmd == "u") searchUnknown(parts);
             else if (cmd == "f" || cmd == "r") refine(parts);
             else if (cmd == "l") showResults(parts);
-            else if (cmd == "m") modify(parts);
-            else if (cmd == "w") writeBack();
+            else if (cmd == "w") cmdWrite(parts);
             else if (cmd == "c") { fuzzy.reset(); printf(GRN "  已清空\n" RST); }
             else printf(RED "  ? 未知命令, 输入 ? 查看帮助\n" RST);
         }
@@ -142,12 +141,11 @@ private:
         printf("  " CYN "f <value>" RST "      精炼为精确值\n");
         printf("  " CYN "f >N / f <N" RST "    精炼为大于/小于\n");
         printf("  " CYN "l [N]" RST "          列出结果\n");
-        printf("  " CYN "m <i> <v>" RST "      修改第i个\n");
-        printf("  " CYN "ma <v>" RST "         修改全部\n");
-        printf("  " CYN "w" RST "              写回\n");
+        printf("  " CYN "w <value>" RST "      修改全部并写回\n");
+        printf("  " CYN "w <i> <v>" RST "     修改第i个并写回\n");
         printf("  " CYN "c" RST "              清空\n");
         printf("  " CYN "q" RST "              退出\n\n");
-        printf(GRY "  经典流程: s 100 → (改值) → f + → l → m 1 999 → w\n" RST "\n");
+        printf(GRY "  经典流程: s 100 → (改值) → f + → l → w 999\n" RST "\n");
     }
 
     void setType(const std::vector<std::string>& parts) {
@@ -286,35 +284,32 @@ private:
         if (n > (size_t)show) printf(GRY "  ... (%s more)\n" RST, fmtN(n - show).c_str());
     }
 
-    // ── 修改 ──
-    void modify(const std::vector<std::string>& parts) {
+    // ── 修改并写回 ──
+    void cmdWrite(const std::vector<std::string>& parts) {
         if (fuzzy.size() == 0) { printf(RED "  无结果\n" RST); return; }
-        if (parts.size() >= 3 && parts[1] == "a") {
-            // ma <value>
-            callTyped([&](auto dummy) {
-                using T = decltype(dummy);
-                T v; if (!parse(parts[2], v)) { printf(RED "  无效值\n" RST); return; }
-                for (size_t i = 0; i < fuzzy.size(); i++) fuzzy.setValueAt<T>(i, v);
-            });
-            printf(GRN "  ✓ 已修改 %s 条 (w=写回)\n" RST, fmtN(fuzzy.size()).c_str());
-        } else if (parts.size() >= 3) {
+        if (parts.size() < 2) { printf("  w <value>  |  w <index> <value>\n"); return; }
+
+        if (parts.size() >= 3) {
+            // w <index> <value>
             int idx; if (!parse(parts[1], idx) || idx < 1 || (size_t)idx > fuzzy.size())
             { printf(RED "  无效索引\n" RST); return; }
             callTyped([&](auto dummy) {
                 using T = decltype(dummy);
                 T v; if (!parse(parts[2], v)) { printf(RED "  无效值\n" RST); return; }
                 fuzzy.setValueAt<T>(idx - 1, v);
+                fuzzy.writeBack<T>();
             });
-            printf(GRN "  ✓ [%d] 已修改 (w=写回)\n" RST, idx);
+            printf(GRN "  ✓ [%d] 已修改并写回\n" RST, idx);
         } else {
-            printf("  m <index> <value> | ma <value>\n");
+            // w <value> → 修改全部并写回
+            callTyped([&](auto dummy) {
+                using T = decltype(dummy);
+                T v; if (!parse(parts[1], v)) { printf(RED "  无效值\n" RST); return; }
+                for (size_t i = 0; i < fuzzy.size(); i++) fuzzy.setValueAt<T>(i, v);
+                fuzzy.writeBack<T>();
+            });
+            printf(GRN "  ✓ 已修改 %s 条并写回\n" RST, fmtN(fuzzy.size()).c_str());
         }
-    }
-
-    void writeBack() {
-        if (fuzzy.size() == 0) { printf(RED "  无结果\n" RST); return; }
-        callTyped([&](auto dummy) { fuzzy.writeBack<decltype(dummy)>(); });
-        printf(GRN "  ✓ 已写回\n" RST);
     }
 
 private:
