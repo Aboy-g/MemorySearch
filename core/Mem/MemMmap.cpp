@@ -75,7 +75,7 @@ bool MemMmap::mapOneRegion(uintptr_t start, size_t len, MappedRegion& out) {
     out.start = start; out.size = len; out.ptr = nullptr; out.isMmap = false;
 
     int fd = m_io.fd();
-    if (fd < 0 || len == 0 || len > 0x20000000) return false;
+    if (fd < 0 || len == 0) return false;
 
     if (m_cfg.preferMmap) {
         void* p = mmap(nullptr, len, PROT_READ | PROT_WRITE,
@@ -115,7 +115,6 @@ void MemMmap::mapRegions(uint32_t memTypeMask) {
         if (!map.isValid() || !map.readable) continue;
         uint32_t t = static_cast<uint32_t>(map.getMemType());
         if (memTypeMask != 0 && (t & memTypeMask) == 0) continue;
-        if (map.length > 0x20000000) continue;
         if (m_totalMapped + map.length > maxBytes) continue;
 
         MappedRegion mr;
@@ -139,7 +138,7 @@ void MemMmap::unmapRegions() {
 
 void* MemMmap::getPtr(uintptr_t address) const {
     auto* r = findRegion(address);
-    return r ? (r->ptr + (address - r->start)) : nullptr;
+    return (r && r->isMmap) ? (r->ptr + (address - r->start)) : nullptr;
 }
 
 // ============================================================
@@ -148,7 +147,9 @@ void* MemMmap::getPtr(uintptr_t address) const {
 
 bool MemMmap::read(uintptr_t address, void* buffer, size_t size) {
     auto* r = findRegion(address);
-    if (r && address + size <= r->start + r->size) {
+    // 只有 MAP_SHARED 映射才能反映目标进程的实时变化
+    // malloc+pread 是一次性拷贝, 必须走 fallback 读最新值
+    if (r && r->isMmap && address + size <= r->start + r->size) {
         memcpy(buffer, r->ptr + (address - r->start), size);
         return true;
     }
@@ -156,9 +157,10 @@ bool MemMmap::read(uintptr_t address, void* buffer, size_t size) {
 }
 
 bool MemMmap::write(uintptr_t address, const void* buffer, size_t size) {
-    if (m_io.pwrite(address, buffer, size)) {  // pread64 优先保证持久化
+    if (m_io.pwrite(address, buffer, size)) {
         auto* r = findRegion(address);
-        if (r && address + size <= r->start + r->size)
+        // 只同步 mmap 映射 (malloc 拷贝不需要同步)
+        if (r && r->isMmap && address + size <= r->start + r->size)
             memcpy(r->ptr + (address - r->start), buffer, size);
         return true;
     }

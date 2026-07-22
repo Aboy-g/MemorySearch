@@ -31,6 +31,11 @@ static std::string fmtSize(size_t b) {
     while (s >= 1024 && i < 3) { s/=1024; i++; }
     char buf[64]; snprintf(buf, sizeof(buf), "%.1f %s", s, u[i]); return buf;
 }
+static std::string fmtNum(size_t n) {
+    if (n < 10000) return std::to_string(n);
+    if (n < 1000000) { char b[32]; snprintf(b,32,"%.1fK",n/1000.0); return b; }
+    char b[32]; snprintf(b,32,"%.1fM",n/1000000.0); return b;
+}
 static std::string trim(const std::string& s) {
     size_t a = s.find_first_not_of(" \t\n\r");
     return a == std::string::npos ? "" : s.substr(a, s.find_last_not_of(" \t\n\r")-a+1);
@@ -137,7 +142,7 @@ public:
                    REGIONS[regionIdx].name,
                    fuzzy.phase()==FuzzySearch::Phase::REGION_SNAPSHOT?"快照":
                    fuzzy.phase()==FuzzySearch::Phase::INDIVIDUAL?"个体":"空闲");
-            if (n > 0) printf(CLR_BOLD "%s" CLR_RESET, fmtSize(n).c_str());
+            if (n > 0) printf(CLR_BOLD "%s" CLR_RESET, fmtNum(n).c_str());
             else printf("0");
             printf(" " CLR_GRAY ">" CLR_RESET " ");
 
@@ -161,6 +166,7 @@ public:
             else if (cmd=="w") cmdWrite();
             else if (cmd=="lock") cmdLock(parts);
             else if (cmd=="e") cmdExport(parts);
+            else if (cmd=="v") cmdVerify(parts);
             else if (cmd=="c") cmdClear();
             else if (cmd=="mem") cmdMem();
             else printf(CLR_RED "  ? h=帮助\n" CLR_RESET);
@@ -187,16 +193,19 @@ private:
         printf("  " CLR_CYAN "s <value>" CLR_RESET "     精确值搜索\n");
         printf("  " CLR_CYAN "u [max]" CLR_RESET "       未知值搜索 → 自动快照\n");
         printf("  " CLR_CYAN "f +|-|~|=|<val>" CLR_RESET " 精炼: 变大/变小/变化/未变/精确值\n");
+        printf("  " CLR_CYAN "f >N / f <N" CLR_RESET "    直接过滤: 大于/小于某值\n");
         printf("  " CLR_CYAN "l [N]" CLR_RESET "        列出结果\n");
         printf("  " CLR_CYAN "m <i> <v>" CLR_RESET "     修改指定结果\n");
         printf("  " CLR_CYAN "ma <v>" CLR_RESET "       修改全部\n");
         printf("  " CLR_CYAN "w" CLR_RESET "             写回进程\n");
         printf("  " CLR_CYAN "lock <v>" CLR_RESET "     后台锁定值\n");
         printf("  " CLR_CYAN "e [file]" CLR_RESET "     导出地址列表\n");
+        printf("  " CLR_CYAN "v [N]" CLR_RESET "        验证地址: 重读 + 对比快照\n");
         printf("  " CLR_CYAN "c" CLR_RESET "             清空结果\n");
         printf("  " CLR_CYAN "mem" CLR_RESET "           显示内存用量\n");
         printf("  " CLR_CYAN "q" CLR_RESET "             退出\n");
-        printf("\n  " CLR_GRAY "经典流程: u → (游戏中改值) → f+ → f+ → l → ma 999 → w" CLR_RESET "\n\n");
+        printf("\n  " CLR_YELLOW "快照精炼: s 100 → (游戏中改值) → f+ 变大/f- 变小/f~ 变化/f= 未变" CLR_RESET "\n");
+        printf("  " CLR_GRAY  "直接过滤: s 100 → f >200 或 f <50 或 f 999 (不依赖快照)" CLR_RESET "\n\n");
     }
 
     void cmdRegion(const std::vector<std::string>& parts) {
@@ -244,7 +253,7 @@ private:
         case DType::DOUBLE: { double v; if(!parseNum(parts[1],v)){printf(CLR_RED"  无效\n" CLR_RESET);return;}
             fuzzy.searchValue<double>(params, v, showProgress); printf("\r"); n=fuzzy.size(); break; }
         }
-        printf(CLR_GREEN "  ✓ %s 条 | 自动快照已创建\n" CLR_RESET, fmtSize(n).c_str());
+        printf(CLR_GREEN "  ✓ %s 条 | 自动快照已创建\n" CLR_RESET, fmtNum(n).c_str());
         if (n>0 && n<=10) listTop(10);
         else if (n>10) printf("  " CLR_GRAY "(改值后 f+/- 精炼)" CLR_RESET "\n");
     }
@@ -264,14 +273,14 @@ private:
             }
             if (est > 200000000) {
                 printf(CLR_YELLOW "  预估 %s 条 (>2亿), 将用区域快照模式 (%s 内存)\n" CLR_RESET,
-                       fmtSize(est).c_str(), fmtSize(est*tsize(dtype)).c_str());
+                       fmtNum(est).c_str(), fmtSize(est*tsize(dtype)).c_str());
                 printf(CLR_GRAY "  或指定上限: u 5000000\n" CLR_RESET);
             }
         }
 
         fuzzy.reset();
         if (maxR > 0) fuzzy.m_cfg.maxIndividual = maxR;
-        fuzzy.m_cfg.verbose = false;
+        fuzzy.m_cfg.verbose = true;  // 开启诊断输出
 
         switch(dtype) {
         case DType::INT32: fuzzy.searchUnknown<int32_t>(params, maxR, showProgress); break;
@@ -288,7 +297,7 @@ private:
         } else {
             printf(CLR_GREEN "  ✓ %s 条" CLR_RESET " | "
                    CLR_GRAY "内存 %s | f+/-/~ 精炼\n" CLR_RESET,
-                   fmtSize(size()).c_str(), fmtSize(fuzzy.memoryUsed()).c_str());
+                   fmtNum(size()).c_str(), fmtSize(fuzzy.memoryUsed()).c_str());
         }
     }
 
@@ -312,14 +321,26 @@ private:
                           case DType::FLOAT:after=fuzzy.refine<float>(cop);break;
                           case DType::DOUBLE:after=fuzzy.refine<double>(cop);break;}
             // 显示: 区域快照模式用估算值, 个体模式用实际值
-            auto showN = [](size_t n) -> std::string {
-                if (n > 1000000) return fmtSize(n) + " 条";
-                return std::to_string(n) + " 条";
-            };
-            printf(CLR_GREEN "  ✓ %s → %s\n" CLR_RESET, showN(before).c_str(), showN(after).c_str());
+            printf(CLR_GREEN "  ✓ %s → %s 条\n" CLR_RESET,
+                   fmtNum(before).c_str(), fmtNum(after).c_str());
             if (after <= 20 && after > 0) listTop(after);
             else if (after > 100000)
                 printf(CLR_YELLOW "  ⚠ 结果较多, 可继续 f+/- 精炼或 s <value> 精确过滤\n" CLR_RESET);
+        } else if (op.size() >= 2 && (op[0] == '>' || op[0] == '<')) {
+            // 直接比较过滤: f >N 或 f <N (不依赖快照)
+            bool gt = (op[0] == '>');
+            bool eq = (op.size() > 1 && op[1] == '=');
+            CompareOp cop = gt ? (eq ? CompareOp::GTE : CompareOp::GT)
+                               : (eq ? CompareOp::LTE : CompareOp::LT);
+            size_t after = 0;
+            std::string valStr = op.substr(gt && eq ? 2 : 1);
+            switch(dtype){case DType::INT32:{int32_t v;if(parseNum(valStr,v))after=fuzzy.filterCompare<int32_t>(cop,v);break;}
+                          case DType::INT64:{int64_t v;if(parseNum(valStr,v))after=fuzzy.filterCompare<int64_t>(cop,v);break;}
+                          case DType::FLOAT:{float v;if(parseNum(valStr,v))after=fuzzy.filterCompare<float>(cop,v);break;}
+                          case DType::DOUBLE:{double v;if(parseNum(valStr,v))after=fuzzy.filterCompare<double>(cop,v);break;}}
+            printf(CLR_GREEN "  ✓ %s → %s 条\n" CLR_RESET,
+                   fmtNum(before).c_str(), fmtNum(after).c_str());
+            if (after <= 20 && after > 0) listTop(after);
         } else {
             // 精确值过滤
             size_t after = 0;
@@ -327,10 +348,8 @@ private:
                           case DType::INT64:{int64_t v;if(parseNum(op,v))after=fuzzy.filterExact<int64_t>(v);break;}
                           case DType::FLOAT:{float v;if(parseNum(op,v))after=fuzzy.filterExact<float>(v);break;}
                           case DType::DOUBLE:{double v;if(parseNum(op,v))after=fuzzy.filterExact<double>(v);break;}}
-            auto showN = [](size_t n) -> std::string {
-                return n > 1000000 ? fmtSize(n) + " 条" : std::to_string(n) + " 条";
-            };
-            printf(CLR_GREEN "  ✓ %s → %s\n" CLR_RESET, showN(before).c_str(), showN(after).c_str());
+            printf(CLR_GREEN "  ✓ %s → %s 条\n" CLR_RESET,
+                   fmtNum(before).c_str(), fmtNum(after).c_str());
             if (after <= 20 && after > 0) listTop(after);
         }
     }
@@ -350,7 +369,7 @@ private:
                           case DType::FLOAT:printf("%.6f\n",fuzzy.valueAt<float>(i));break;
                           case DType::DOUBLE:printf("%.12f\n",fuzzy.valueAt<double>(i));break;}
         }
-        if (size()>show) printf("  " CLR_GRAY "...(%s more)" CLR_RESET "\n", fmtSize(size()-show).c_str());
+        if (size()>show) printf("  " CLR_GRAY "...(%s more)" CLR_RESET "\n", fmtNum(size()-show).c_str());
     }
 
     uintptr_t addrAt(size_t i) {
@@ -373,7 +392,7 @@ private:
         if (size()==0) { printf(CLR_RED "  无结果\n" CLR_RESET); return; }
         if (parts.size()<2) { printf("  ma <value>\n"); return; }
         for (size_t i=0;i<size();i++) setOne(i,parts[1]);
-        printf(CLR_GREEN "  ✓ %s 条已修改 (w 写回)\n" CLR_RESET, fmtSize(size()).c_str());
+        printf(CLR_GREEN "  ✓ %s 条已修改 (w 写回)\n" CLR_RESET, fmtNum(size()).c_str());
     }
 
     bool setOne(size_t i, const std::string& s) {
@@ -408,7 +427,7 @@ private:
                           case DType::DOUBLE:memcpy(&lockValues[i*sz],fuzzy.results<double>().valuePtr(i),sz);break;}
         }
         lockActive=true;
-        printf(CLR_GREEN "  ✓ 锁定 %s 地址 (500ms)\n" CLR_RESET, fmtSize(lockAddrs.size()).c_str());
+        printf(CLR_GREEN "  ✓ 锁定 %s 地址 (500ms)\n" CLR_RESET, fmtNum(lockAddrs.size()).c_str());
         std::thread([this,sz](){
             while(lockActive){ for(size_t i=0;i<lockAddrs.size()&&lockActive;i++)
                 mem.write(lockAddrs[i],&lockValues[i*sz],sz);
@@ -421,11 +440,53 @@ private:
         std::string fn="addrs.txt"; if (parts.size()>=2) fn=parts[1];
         std::ofstream f(fn); if(!f){printf(CLR_RED"  无法创建\n" CLR_RESET);return;}
         for (size_t i=0;i<size();i++) f<<"0x"<<std::hex<<addrAt(i)<<std::dec<<"\n";
-        printf(CLR_GREEN "  ✓ 已导出 %s 地址 → %s\n" CLR_RESET, fmtSize(size()).c_str(), fn.c_str());
+        printf(CLR_GREEN "  ✓ 已导出 %s 地址 → %s\n" CLR_RESET, fmtNum(size()).c_str(), fn.c_str());
     }
 
     void cmdClear() { fuzzy.reset(); printf("  ✓ 已清空\n"); }
     void cmdMem() { printf("  内存: %s\n", fmtSize(fuzzy.memoryUsed()).c_str()); }
+
+    void cmdVerify(const std::vector<std::string>& parts) {
+        if (size() == 0) { printf("  无结果\n"); return; }
+        int n = 5;
+        if (parts.size() >= 2) parseNum(parts[1], n);
+        n = std::min(n, (int)size());
+
+        printf("  重读前 %d 个地址 (当前值 vs 快照):\n", n);
+        for (int i = 0; i < n; i++) {
+            uintptr_t addr = addrAt(i);
+            // 读当前值
+            size_t vsz = tsize(dtype);
+            uint8_t curBuf[8] = {};
+            bool ok = mem.read(addr, curBuf, vsz);
+
+            // 从快照取旧值
+            printf("  [%d] 0x%llx  cur=", i+1, (unsigned long long)addr);
+            if (ok) printRaw(curBuf, vsz);
+            else printf("?");
+            printf("  snap=");
+            printSnapVal(i);
+            printf("\n");
+        }
+    }
+
+    void printRaw(const uint8_t* buf, size_t vsz) {
+        switch(dtype) {
+            case DType::INT32: { int32_t v; memcpy(&v, buf, vsz); printf("%d", v); break; }
+            case DType::INT64: { int64_t v; memcpy(&v, buf, vsz); printf("%lld", (long long)v); break; }
+            case DType::FLOAT: { float v; memcpy(&v, buf, vsz); printf("%.6f", v); break; }
+            case DType::DOUBLE:{ double v; memcpy(&v, buf, vsz); printf("%.12f", v); break; }
+        }
+    }
+
+    void printSnapVal(size_t i) {
+        switch(dtype) {
+            case DType::INT32: printf("%d", fuzzy.valueAt<int32_t>(i)); break;
+            case DType::INT64: printf("%lld", (long long)fuzzy.valueAt<int64_t>(i)); break;
+            case DType::FLOAT: printf("%.6f", fuzzy.valueAt<float>(i)); break;
+            case DType::DOUBLE:printf("%.12f", fuzzy.valueAt<double>(i)); break;
+        }
+    }
 };
 
 // ==================== 进程选择 ====================
