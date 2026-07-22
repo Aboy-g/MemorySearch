@@ -589,8 +589,10 @@ inline size_t FuzzySearch::filterIndividual(Pred pred) {
     BulkResults<T> filtered;
     filtered.reserve(size());
     for (size_t i = 0; i < size(); i++) {
-        T cur = valueAt<T>(i);
-        if (pred(cur)) filtered.append(addrAt<T>(i), cur);
+        uintptr_t addr = addrAt<T>(i);
+        T cur{};
+        if (!m_mem.read(addr, &cur, sizeof(T))) continue;  // 读实时值
+        if (pred(cur)) filtered.append(addr, cur);
     }
 
     size_t result = filtered.size();
