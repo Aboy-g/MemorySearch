@@ -59,7 +59,7 @@ std::vector<uintptr_t> SearchEngine::scanPatternString(const SearchParams& param
 }
 
 // ============================================================
-// 模式搜索 (优化版本 — BMH + 线程局部缓冲)
+// 模式搜索 (BMH + parallelScan)
 // ============================================================
 std::vector<uintptr_t> SearchEngine::searchPattern(
     const SearchParams& params,
@@ -74,11 +74,10 @@ std::vector<uintptr_t> SearchEngine::searchPattern(
     if (effectiveMask.size() != pattern.size())
         throw std::invalid_argument("Mask size must equal pattern size");
 
-    // 构建优化搜索器
     bool hasWildcard = false;
-    for (uint8_t m : effectiveMask) {
+    for (uint8_t m : effectiveMask)
         if (m == 0) { hasWildcard = true; break; }
-    }
+
     FastSearch::OptimizedPatternSearch optSearch;
     if (hasWildcard)
         optSearch.init(pattern.data(), effectiveMask.data(), pattern.size());
@@ -86,82 +85,30 @@ std::vector<uintptr_t> SearchEngine::searchPattern(
         optSearch.init(pattern.data(), pattern.size());
 
     const size_t MAX_PER_CHUNK = 131072;
+    const size_t maxR = params.maxResults;
 
-    // 使用 parallelScan 框架
-    auto ranges = getSearchableRanges(params);
-    if (ranges.empty()) return {};
-
-    const size_t CHUNK_SIZE = params.effectiveChunkSize();
-    size_t totalBytes = 0;
-    for (const auto& r : ranges) totalBytes += (r.end - r.start);
-
-    unsigned int numThreads = params.numThreads;
-    if (numThreads == 0) {
-        numThreads = std::thread::hardware_concurrency();
-        if (numThreads == 0) numThreads = 4;
-    }
-    numThreads = std::min(numThreads, static_cast<unsigned int>(ranges.size()));
-
-    std::vector<std::vector<uintptr_t>> threadResults(numThreads);
-    for (auto& v : threadResults) v.reserve(65536);
-
-    std::atomic<size_t> nextIdx{0};
-    std::atomic<size_t> totalBytesRead{0};
-
-    auto worker = [&](int tid) {
-        std::vector<uint8_t> buffer(CHUNK_SIZE + pattern.size() - 1);
+    std::vector<std::vector<uintptr_t>> threadResults;
+    auto checker = [&](uintptr_t base, const uint8_t* buffer, size_t bufSize,
+                       std::vector<uintptr_t>& out) {
         thread_local std::vector<uintptr_t> tlsMatchBuf;
         if (tlsMatchBuf.size() < MAX_PER_CHUNK)
             tlsMatchBuf.resize(MAX_PER_CHUNK);
-
-        auto& out = threadResults[tid];
-
-        while (true) {
-            size_t idx = nextIdx.fetch_add(1);
-            if (idx >= ranges.size()) break;
-
-            const auto& range = ranges[idx];
-            uintptr_t cur = range.start;
-            uintptr_t end = range.end;
-
-            while (cur < end) {
-                size_t toRead = std::min(CHUNK_SIZE + pattern.size() - 1,
-                                         static_cast<size_t>(end - cur));
-                if (!m_mem.read(cur, buffer.data(), toRead)) {
-                    cur += 4096;
-                    continue;
-                }
-                totalBytesRead.fetch_add(toRead, std::memory_order_relaxed);
-
-                size_t found = optSearch.search(buffer.data(), toRead,
-                                                tlsMatchBuf.data(), MAX_PER_CHUNK);
-                for (size_t k = 0; k < found; k++)
-                    out.push_back(cur + tlsMatchBuf[k]);
-
-                cur += std::min(CHUNK_SIZE, static_cast<size_t>(end - cur));
-            }
+        if (maxR > 0 && out.size() >= maxR) return;
+        size_t found = optSearch.search(buffer, bufSize, tlsMatchBuf.data(), MAX_PER_CHUNK);
+        for (size_t k = 0; k < found; k++) {
+            if (maxR > 0 && out.size() >= maxR) break;
+            out.push_back(base + tlsMatchBuf[k]);
         }
     };
 
-    auto t0 = std::chrono::high_resolution_clock::now();
-
-    std::vector<std::thread> threads;
-    threads.reserve(numThreads);
-    for (unsigned int i = 0; i < numThreads; ++i)
-        threads.emplace_back(worker, i);
-    for (auto& t : threads) t.join();
-
-    auto t1 = std::chrono::high_resolution_clock::now();
-
-    size_t totalRes = 0;
-    for (const auto& v : threadResults) totalRes += v.size();
-
+    parallelScan(params, checker, threadResults);
+    size_t total = 0;
+    for (auto& v : threadResults) total += v.size();
     std::vector<uintptr_t> results;
-    results.reserve(totalRes);
+    results.reserve(total);
     for (auto& v : threadResults)
         results.insert(results.end(), v.begin(), v.end());
-
-    updateStats(t0, t1, totalBytesRead.load(), totalBytes, totalRes, numThreads);
+    if (maxR > 0 && results.size() > maxR) results.resize(maxR);
     return results;
 }
 
@@ -271,83 +218,29 @@ std::vector<uintptr_t> SearchEngine::searchString(const SearchParams& params,
         return searchPattern(params, pattern, mask);
     }
 
-    // 大小写不敏感 — 自定义 checker
-    auto ranges = getSearchableRanges(params);
-    if (ranges.empty()) return {};
-
-    const size_t CHUNK_SIZE = params.effectiveChunkSize();
-    const size_t patLen = pattern.size();
-    size_t totalBytes = 0;
-    for (const auto& r : ranges) totalBytes += (r.end - r.start);
-
-    unsigned int numThreads = params.numThreads;
-    if (numThreads == 0) {
-        numThreads = std::thread::hardware_concurrency();
-        if (numThreads == 0) numThreads = 4;
-    }
-    numThreads = std::min(numThreads, static_cast<unsigned int>(ranges.size()));
-
-    std::vector<std::vector<uintptr_t>> threadResults(numThreads);
-    for (auto& v : threadResults) v.reserve(65536);
-
-    std::atomic<size_t> nextIdx{0};
-    std::atomic<size_t> totalBytesRead{0};
-
-    auto worker = [&](int tid) {
-        std::vector<uint8_t> buffer(CHUNK_SIZE + patLen - 1);
-        auto& out = threadResults[tid];
-
-        while (true) {
-            size_t idx = nextIdx.fetch_add(1);
-            if (idx >= ranges.size()) break;
-
-            const auto& range = ranges[idx];
-            uintptr_t cur = range.start;
-            uintptr_t end = range.end;
-
-            while (cur < end) {
-                size_t toRead = std::min(CHUNK_SIZE + patLen - 1,
-                                         static_cast<size_t>(end - cur));
-                if (!m_mem.read(cur, buffer.data(), toRead)) {
-                    cur += 4096;
-                    continue;
-                }
-                totalBytesRead.fetch_add(toRead, std::memory_order_relaxed);
-
-                size_t limit = toRead - patLen + 1;
-                for (size_t i = 0; i < limit; i++) {
-                    bool match = true;
-                    for (size_t j = 0; j < patLen; j++) {
-                        unsigned char a = static_cast<unsigned char>(
-                            std::tolower(buffer[i + j]));
-                        if (a != pattern[j]) { match = false; break; }
-                    }
-                    if (match) out.push_back(cur + i);
-                }
-                cur += std::min(CHUNK_SIZE, static_cast<size_t>(end - cur));
+    // 大小写不敏感 — parallelScan + 自定义 checker
+    const size_t patLen2 = pattern.size();
+    std::vector<std::vector<uintptr_t>> threadResults;
+    auto checker2 = [&](uintptr_t base, const uint8_t* buffer, size_t bufSize,
+                         std::vector<uintptr_t>& out) {
+        size_t limit = bufSize - patLen2 + 1;
+        for (size_t i = 0; i < limit; i++) {
+            bool match = true;
+            for (size_t j = 0; j < patLen2; j++) {
+                if ((unsigned char)std::tolower(buffer[i + j]) != pattern[j])
+                { match = false; break; }
             }
+            if (match) out.push_back(base + i);
         }
     };
+    parallelScan(params, checker2, threadResults);
 
-    auto t0 = std::chrono::high_resolution_clock::now();
-
-    std::vector<std::thread> threads;
-    threads.reserve(numThreads);
-    for (unsigned int i = 0; i < numThreads; ++i)
-        threads.emplace_back(worker, i);
-    for (auto& t : threads) t.join();
-
-    auto t1 = std::chrono::high_resolution_clock::now();
-
-    size_t totalRes = 0;
-    for (const auto& v : threadResults) totalRes += v.size();
-
+    size_t total2 = 0;
+    for (auto& v : threadResults) total2 += v.size();
     std::vector<uintptr_t> results;
-    results.reserve(totalRes);
+    results.reserve(total2);
     for (auto& v : threadResults)
         results.insert(results.end(), v.begin(), v.end());
-
-    updateStats(t0, t1, totalBytesRead.load(), totalBytes, totalRes, numThreads);
     return results;
 }
 
@@ -377,89 +270,32 @@ std::vector<uintptr_t> SearchEngine::searchStringUTF16(const SearchParams& param
         return searchPattern(params, pattern, mask);
     }
 
-    // 大小写不敏感
-    auto ranges = getSearchableRanges(params);
-    if (ranges.empty()) return {};
-
-    const size_t CHUNK_SIZE = params.effectiveChunkSize();
-    const size_t patLen = pattern.size();
-    size_t totalBytes = 0;
-    for (const auto& r : ranges) totalBytes += (r.end - r.start);
-
-    unsigned int numThreads = params.numThreads;
-    if (numThreads == 0) {
-        numThreads = std::thread::hardware_concurrency();
-        if (numThreads == 0) numThreads = 4;
-    }
-    numThreads = std::min(numThreads, static_cast<unsigned int>(ranges.size()));
-
-    std::vector<std::vector<uintptr_t>> threadResults(numThreads);
-    for (auto& v : threadResults) v.reserve(65536);
-
-    std::atomic<size_t> nextIdx{0};
-    std::atomic<size_t> totalBytesRead{0};
-
-    auto worker = [&](int tid) {
-        std::vector<uint8_t> buffer(CHUNK_SIZE + patLen - 1);
-        auto& out = threadResults[tid];
-
-        while (true) {
-            size_t idx = nextIdx.fetch_add(1);
-            if (idx >= ranges.size()) break;
-
-            const auto& range = ranges[idx];
-            uintptr_t cur = range.start;
-            uintptr_t end = range.end;
-
-            while (cur < end) {
-                size_t toRead = std::min(CHUNK_SIZE + patLen - 1,
-                                         static_cast<size_t>(end - cur));
-                if (!m_mem.read(cur, buffer.data(), toRead)) {
-                    cur += 4096;
-                    continue;
+    // 大小写不敏感 — parallelScan + 自定义 checker
+    const size_t patLen3 = pattern.size();
+    std::vector<std::vector<uintptr_t>> threadResults3;
+    auto checker3 = [&](uintptr_t base, const uint8_t* buffer, size_t bufSize,
+                         std::vector<uintptr_t>& out) {
+        for (size_t i = 0; i + patLen3 <= bufSize; i += 2) {
+            bool match = true;
+            for (size_t j = 0; j < patLen3; j += 2) {
+                uint16_t val = (uint16_t)(buffer[i+j] | (buffer[i+j+1] << 8));
+                uint16_t exp = (uint16_t)(pattern[j] | (pattern[j+1] << 8));
+                if (!caseSensitive && val < 128 && exp < 128) {
+                    val = (uint16_t)std::tolower((int)val);
+                    exp = (uint16_t)std::tolower((int)exp);
                 }
-                totalBytesRead.fetch_add(toRead, std::memory_order_relaxed);
-
-                for (size_t i = 0; i + patLen <= toRead; i += 2) {
-                    bool match = true;
-                    for (size_t j = 0; j < patLen; j += 2) {
-                        uint16_t val = static_cast<uint16_t>(
-                            buffer[i + j] | (buffer[i + j + 1] << 8));
-                        uint16_t expected = static_cast<uint16_t>(
-                            pattern[j] | (pattern[j + 1] << 8));
-                        if (!caseSensitive && val < 128 && expected < 128) {
-                            val = static_cast<uint16_t>(
-                                std::tolower(static_cast<int>(val)));
-                            expected = static_cast<uint16_t>(
-                                std::tolower(static_cast<int>(expected)));
-                        }
-                        if (val != expected) { match = false; break; }
-                    }
-                    if (match) out.push_back(cur + i);
-                }
-                cur += std::min(CHUNK_SIZE, static_cast<size_t>(end - cur));
+                if (val != exp) { match = false; break; }
             }
+            if (match) out.push_back(base + i);
         }
     };
+    parallelScan(params, checker3, threadResults3);
 
-    auto t0 = std::chrono::high_resolution_clock::now();
-
-    std::vector<std::thread> threads;
-    threads.reserve(numThreads);
-    for (unsigned int i = 0; i < numThreads; ++i)
-        threads.emplace_back(worker, i);
-    for (auto& t : threads) t.join();
-
-    auto t1 = std::chrono::high_resolution_clock::now();
-
-    size_t totalRes = 0;
-    for (const auto& v : threadResults) totalRes += v.size();
-
+    size_t total3 = 0;
+    for (auto& v : threadResults3) total3 += v.size();
     std::vector<uintptr_t> results;
-    results.reserve(totalRes);
-    for (auto& v : threadResults)
+    results.reserve(total3);
+    for (auto& v : threadResults3)
         results.insert(results.end(), v.begin(), v.end());
-
-    updateStats(t0, t1, totalBytesRead.load(), totalBytes, totalRes, numThreads);
     return results;
 }
