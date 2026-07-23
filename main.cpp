@@ -53,6 +53,9 @@ static bool parseNumber(const std::string &str, T &out) {
     } catch (...) { return false; }
 }
 
+// 全局开关: 常驻内存扫描(反检测)模式
+static bool g_residentOnly = false;
+
 // ==================== 综合演示 ====================
 static void runDemo(SearchEngine &search, Mem &mem) {
     (void)mem;
@@ -144,6 +147,7 @@ int main(int argc, char *argv[]) {
         std::cout << "  stats                      显示性能统计\n";
         std::cout << "  clear                      清空结果集\n";
         std::cout << "  demo                       运行演示\n";
+        std::cout << "  resident [on|off]         切换常驻内存扫描(反检测): 仅扫描 RAM 页, 跳过 swap 页\n";
         std::cout << "  help                       帮助\n";
         std::cout << "  exit                       退出\n";
     };
@@ -165,10 +169,21 @@ int main(int argc, char *argv[]) {
             printHelp();
         } else if (cmd == "demo") {
             runDemo(search, mem);
+        } else if (cmd == "resident") {
+            if (parts.size() >= 2) {
+                std::string arg = toLower(parts[1]);
+                if (arg == "on" || arg == "1") g_residentOnly = true;
+                else if (arg == "off" || arg == "0") g_residentOnly = false;
+                else { std::cout << "用法: resident [on|off]\n"; continue; }
+            } else {
+                g_residentOnly = !g_residentOnly;
+            }
+            std::cout << "常驻内存扫描(residentOnly) = " << (g_residentOnly ? "开启 (反检测)" : "关闭 (默认)") << "\n";
         } else if (cmd == "search") {
             if (parts.size() < 3) { std::cout << "用法: search <type> <value>\n"; continue; }
             std::string type = toLower(parts[1]);
             SearchParams p;
+            p.residentOnly = g_residentOnly;
             if (type == "int") {
                 int value; if (!parseNumber(parts[2], value)) { std::cout << "无效整数\n"; continue; }
                 currentResults = search.search<int>(p, value);
@@ -191,6 +206,7 @@ int main(int argc, char *argv[]) {
             else if (opStr == "lte") op = CompareOp::LTE;
             else { std::cout << "不支持的操作符 (gt/lt/neq/gte/lte)\n"; continue; }
             SearchParams p;
+            p.residentOnly = g_residentOnly;
             if (toLower(parts[1]) == "int") {
                 int value; if (!parseNumber(parts[3], value)) { std::cout << "无效值\n"; continue; }
                 currentResults = search.searchCompare<int>(p, value, op);
@@ -241,6 +257,7 @@ int main(int argc, char *argv[]) {
         } else if (cmd == "pattern") {
             if (parts.size() < 2) { std::cout << "用法: pattern <hex>\n"; continue; }
             SearchParams p; p.memTypeMask = MemType::RANGE_ALL;
+            p.residentOnly = g_residentOnly;
             auto addrs = search.scanPatternString(p, parts[1]);
             std::cout << "找到 " << addrs.size() << " 个匹配\n";
             for (size_t i = 0; i < std::min(size_t(10), addrs.size()); ++i)
@@ -248,6 +265,7 @@ int main(int argc, char *argv[]) {
         } else if (cmd == "utf8") {
             if (parts.size() < 2) { std::cout << "用法: utf8 <string>\n"; continue; }
             SearchParams p; p.memTypeMask = MemType::RANGE_ALL;
+            p.residentOnly = g_residentOnly;
             auto addrs = search.searchString(p, parts[1], true, true);
             std::cout << "找到 " << addrs.size() << " 个匹配\n";
             for (size_t i = 0; i < std::min(size_t(10), addrs.size()); ++i)
@@ -257,6 +275,7 @@ int main(int argc, char *argv[]) {
             std::u16string u16str;
             for (char c : parts[1]) u16str.push_back((char16_t)c);
             SearchParams p; p.memTypeMask = MemType::RANGE_ALL;
+            p.residentOnly = g_residentOnly;
             auto addrs = search.searchStringUTF16(p, u16str, true, true);
             std::cout << "找到 " << addrs.size() << " 个匹配\n";
         } else if (cmd == "dump") {

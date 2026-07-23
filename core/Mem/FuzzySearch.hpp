@@ -312,6 +312,8 @@ inline void FuzzySearch::searchUnknown(const SearchParams& params, size_t maxRes
     m_phase = Phase::UNKNOWN;
 
     auto maps = Process::get_process_maps(m_mem.get_pid());
+    if (params.residentOnly)
+        maps = filterResidentMaps(m_mem.get_pid(), maps);
     size_t estTotal = estimateResults(maps, params, sizeof(T));
 
     if (m_cfg.verbose) {
