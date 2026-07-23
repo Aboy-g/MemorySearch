@@ -17,6 +17,13 @@
 #include <chrono>
 #include <limits>
 #include <stdexcept>
+#include <cstdio>
+
+// Linux/Android 下才需要 pagemap 接口 (用于反检测: 跳过 非驻留 页)
+#ifdef __linux__
+#include <unistd.h>
+#include <fcntl.h>
+#endif
 
 // ============================================================
 // MemorySearch — 企业级内存搜索库
@@ -49,6 +56,11 @@ struct SearchParams {
     // 结果控制
     size_t maxResults = 0;                       // 0=无限制 (注意:超大结果集会OOM)
     bool align = true;                           // 按类型大小对齐 (仅精确值搜索)
+
+    // 反检测: 仅扫描常驻内存(RAM)页, 跳过已换出到 非驻留内存 的页。
+    // 开启后扫描前会依据 /proc/pid/pagemap 的 PRESENT 位过滤区域,
+    // 避免跨进程读取触发目标进程补页被反外挂检测。需 root 权限。
+    bool residentOnly = false;
 
     // 快照 (用于 CHANGED/UNCHANGED/INCREASED/DECREASED)
     const std::unordered_map<uintptr_t, std::vector<uint8_t>>* snapshot = nullptr;
@@ -432,6 +444,94 @@ using Compare = CompareOp;
 // 模板实现
 // ============================================================
 
+// ============================================================
+// 反检测: 常驻内存过滤
+// ============================================================
+// 依据 /proc/pid/pagemap 第 63 位(PRESENT)判断页面是否在 RAM,
+// 仅保留常驻内存页组成的连续子区间, 跳过已换出到 非驻留页。
+// 这样跨进程扫描(process_vm_readv)不会触发目标进程补页,
+// 从而避免被反外挂检测。需要 root 权限才能读取 pagemap。
+inline std::vector<MemoryRange> filterResidentRanges(int pid, std::vector<MemoryRange> ranges) {
+#ifdef __linux__
+    long pagesize = sysconf(_SC_PAGESIZE);
+    if (pagesize <= 0) pagesize = 4096;
+    size_t ps = (size_t)pagesize;
+
+    std::string pmpath = "/proc/" + std::to_string(pid) + "/pagemap";
+    int pmfd = open(pmpath.c_str(), O_RDONLY);
+    if (pmfd < 0) {
+        fprintf(stderr, "[!] 无法打开 %s (需 root 权限), 跳过常驻过滤\n", pmpath.c_str());
+        return ranges;
+    }
+
+    const uint64_t PRESENT = 1ULL << 63;
+    const size_t MAX_RUN = 1024u * 1024u; // 单次连续段上限 1MB, 便于上层按块读取
+    std::vector<uint64_t> entries;
+    std::vector<MemoryRange> out;
+
+    for (const auto &r : ranges) {
+        uintptr_t pstart = (r.start / ps) * ps;            // 下取整到页
+        uintptr_t pend = ((r.end + ps - 1) / ps) * ps;     // 上取整到页
+        if (pend <= pstart) continue;
+        size_t npages = (pend - pstart) / ps;
+        entries.resize(npages);
+
+        off_t eoff = (off_t)(pstart / ps) * (off_t)sizeof(uint64_t);
+        size_t total = npages * sizeof(uint64_t);
+        size_t done = 0;
+        while (done < total) {
+            ssize_t n = pread(pmfd, (char *)entries.data() + done, total - done, eoff + (off_t)done);
+            if (n <= 0) break;
+            done += (size_t)n;
+        }
+        size_t valid = done / sizeof(uint64_t);
+
+        size_t i = 0;
+        while (i < valid) {
+            if (!(entries[i] & PRESENT)) { ++i; continue; }
+            size_t run = 1;
+            while (i + run < valid && (run * ps) <= MAX_RUN && (entries[i + run] & PRESENT))
+                ++run;
+            uintptr_t s = pstart + i * ps;
+            uintptr_t e = pstart + (i + run) * ps;
+            if (e > r.end) e = r.end;
+            if (s < r.start) s = r.start;
+            if (s < e) out.push_back({s, e});
+            i += run;
+        }
+    }
+
+    close(pmfd);
+    return out;
+#else
+    (void)pid;
+    return ranges;
+#endif
+}
+
+// 对 ProcMap 列表做同样的常驻过滤 (用于 FuzzySearch 快照流程)
+inline std::vector<ProcMap> filterResidentMaps(int pid, const std::vector<ProcMap> &maps) {
+#ifdef __linux__
+    std::vector<ProcMap> out;
+    out.reserve(maps.size());
+    for (const auto &m : maps) {
+        if (!m.isValid() || !m.readable) { out.push_back(m); continue; }
+        auto subs = filterResidentRanges(pid, {{m.startAddress, m.endAddress}});
+        for (const auto &sub : subs) {
+            ProcMap nm = m;
+            nm.startAddress = sub.start;
+            nm.endAddress = sub.end;
+            nm.length = sub.end - sub.start;
+            out.push_back(nm);
+        }
+    }
+    return out;
+#else
+    (void)pid;
+    return maps;
+#endif
+}
+
 // ── 共享: 构建可搜索区域列表 ────────────────────────
 inline std::vector<MemoryRange> buildSearchRanges(MemBase& mem, const SearchParams& params) {
     auto maps = Process::get_process_maps(mem.get_pid());
@@ -444,6 +544,8 @@ inline std::vector<MemoryRange> buildSearchRanges(MemBase& mem, const SearchPara
         uintptr_t e = std::min(static_cast<uintptr_t>(map.endAddress),   params.endAddress);
         if (s < e) ranges.push_back({s, e});
     }
+    if (params.residentOnly)
+        ranges = filterResidentRanges(mem.get_pid(), std::move(ranges));
     std::sort(ranges.begin(), ranges.end(),
               [](const MemoryRange& a, const MemoryRange& b) {
                   return (a.end - a.start) > (b.end - b.start); });
