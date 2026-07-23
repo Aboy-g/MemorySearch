@@ -19,7 +19,7 @@
 #include <stdexcept>
 #include <cstdio>
 
-// Linux/Android 下才需要 pagemap 接口 (用于反检测: 跳过 swap 页)
+// Linux/Android 下才需要 pagemap 接口 (用于反检测: 跳过 非驻留 页)
 #ifdef __linux__
 #include <unistd.h>
 #include <fcntl.h>
@@ -57,9 +57,9 @@ struct SearchParams {
     size_t maxResults = 0;                       // 0=无限制 (注意:超大结果集会OOM)
     bool align = true;                           // 按类型大小对齐 (仅精确值搜索)
 
-    // 反检测: 仅扫描常驻内存(RAM)页, 跳过已换出到 swap 的页。
+    // 反检测: 仅扫描常驻内存(RAM)页, 跳过已换出到 非驻留内存 的页。
     // 开启后扫描前会依据 /proc/pid/pagemap 的 PRESENT 位过滤区域,
-    // 避免跨进程读取触发目标进程补页(min_flt)被反外挂检测。需 root 权限。
+    // 避免跨进程读取触发目标进程补页被反外挂检测。需 root 权限。
     bool residentOnly = false;
 
     // 快照 (用于 CHANGED/UNCHANGED/INCREASED/DECREASED)
@@ -448,8 +448,8 @@ using Compare = CompareOp;
 // 反检测: 常驻内存过滤
 // ============================================================
 // 依据 /proc/pid/pagemap 第 63 位(PRESENT)判断页面是否在 RAM,
-// 仅保留常驻内存页组成的连续子区间, 跳过已换出到 swap 的页。
-// 这样跨进程扫描(process_vm_readv)不会触发目标进程补页(min_flt),
+// 仅保留常驻内存页组成的连续子区间, 跳过已换出到 非驻留页。
+// 这样跨进程扫描(process_vm_readv)不会触发目标进程补页,
 // 从而避免被反外挂检测。需要 root 权限才能读取 pagemap。
 inline std::vector<MemoryRange> filterResidentRanges(int pid, std::vector<MemoryRange> ranges) {
 #ifdef __linux__
