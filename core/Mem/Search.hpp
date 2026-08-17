@@ -427,11 +427,15 @@ private:
 
     // 并行扫描框架 (内部使用)
     // CheckFunc: void(uintptr_t base, const uint8_t* buffer, size_t bufSize,
-    //                 std::vector<uintptr_t>& out, std::vector<uint8_t>& valueBuf)
+    //                 std::vector<uintptr_t>& out)
+    // overlap: 每块额外多读的字节数 (模式长度-1), 防止跨块边界漏匹配。
+    //          检查器按 i+patLen<=bufSize 上界搜索, 前进步长仍为 CHUNK_SIZE,
+    //          搜索窗口精确划分, 无重复无遗漏。
     template <typename CheckFunc>
     void parallelScan(const SearchParams& params, CheckFunc&& checker,
                       std::vector<std::vector<uintptr_t>>& threadResults,
-                      ProgressCallback progressCb = nullptr) const;
+                      ProgressCallback progressCb = nullptr,
+                      size_t overlap = 0) const;
 
     // 统计
     void updateStats(std::chrono::high_resolution_clock::time_point t0,
@@ -594,7 +598,8 @@ inline void SearchEngine::parallelScan(
     const SearchParams& params,
     CheckFunc&& checker,
     std::vector<std::vector<uintptr_t>>& threadResults,
-    ProgressCallback progressCb) const
+    ProgressCallback progressCb,
+    size_t overlap) const
 {
     auto ranges = getSearchableRanges(params);
     if (ranges.empty()) return;
@@ -621,7 +626,7 @@ inline void SearchEngine::parallelScan(
     std::atomic<bool> cancelled{false};
 
     auto worker = [&](int tid) {
-        std::vector<uint8_t> buffer(CHUNK_SIZE);
+        std::vector<uint8_t> buffer(CHUNK_SIZE + overlap);
         auto& localResults = threadResults[tid];
 
         while (!cancelled.load()) {
@@ -633,14 +638,17 @@ inline void SearchEngine::parallelScan(
             uintptr_t end = range.end;
 
             while (cur < end && !cancelled.load()) {
-                size_t toRead = std::min(CHUNK_SIZE, static_cast<size_t>(end - cur));
+                // 多读 overlap 字节, 检查器按 i+patLen<=bufSize 上界搜索,
+                // 实际搜索起点窗口为 [cur, cur+CHUNK_SIZE), 精确划分:
+                // 跨块边界的匹配不遗漏, 也不重复
+                size_t toRead = std::min(CHUNK_SIZE + overlap, static_cast<size_t>(end - cur));
                 if (!m_mem.read(cur, buffer.data(), toRead)) {
                     cur += 4096;
                     continue;
                 }
                 totalBytesRead.fetch_add(toRead, std::memory_order_relaxed);
                 checker(cur, buffer.data(), toRead, localResults);
-                cur += toRead;
+                cur += std::min(CHUNK_SIZE, static_cast<size_t>(end - cur));
             }
         }
     };

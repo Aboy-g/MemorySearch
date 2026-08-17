@@ -101,15 +101,24 @@ std::vector<uintptr_t> SearchEngine::searchBytes(const SearchParams& params,
         thread_local std::vector<uintptr_t> tlsMatchBuf;
         if (tlsMatchBuf.size() < MAX_PER_CHUNK)
             tlsMatchBuf.resize(MAX_PER_CHUNK);
-        if (maxR > 0 && out.size() >= maxR) return;
-        size_t found = optSearch.search(buffer, bufSize, tlsMatchBuf.data(), MAX_PER_CHUNK);
-        for (size_t k = 0; k < found; k++) {
-            if (maxR > 0 && out.size() >= maxR) break;
-            out.push_back(base + tlsMatchBuf[k]);
+        // 分轮搜索: 单轮命中上限 MAX_PER_CHUNK, 超限则从最后一个命中处续扫,
+        // 防止短模式 (如单字节) 单块命中过多被静默截断
+        size_t off = 0;
+        while (off + optSearch.patternLength() <= bufSize) {
+            if (maxR > 0 && out.size() >= maxR) return;
+            size_t found = optSearch.search(buffer + off, bufSize - off,
+                                            tlsMatchBuf.data(), MAX_PER_CHUNK);
+            if (found == 0) break;
+            for (size_t k = 0; k < found; k++) {
+                if (maxR > 0 && out.size() >= maxR) return;
+                out.push_back(base + off + tlsMatchBuf[k]);
+            }
+            if (found < MAX_PER_CHUNK) break;
+            off += tlsMatchBuf[found - 1] + 1;
         }
     };
 
-    parallelScan(params, checker, threadResults);
+    parallelScan(params, checker, threadResults, nullptr, size - 1);
     auto results = mergeThreadResults(threadResults);
     if (maxR > 0 && results.size() > maxR) results.resize(maxR);
     return results;
@@ -192,14 +201,21 @@ void SearchEngine::searchPatternAsync(const SearchParams& params,
                     continue;
                 }
 
-                size_t found = optSearch.search(buffer.data(), toRead,
-                                                tlsMatchBuf.data(), MAX_PER_CHUNK);
-                for (size_t k = 0; k < found; k++) {
-                    if (stopFlag.load()) return;
-                    if (!callback(cur + tlsMatchBuf[k])) {
-                        stopFlag.store(true);
-                        return;
+                // 分轮搜索: 超限续扫, 防止短模式单块命中被静默截断
+                size_t off = 0;
+                while (off + optSearch.patternLength() <= toRead) {
+                    size_t found = optSearch.search(buffer.data() + off, toRead - off,
+                                                    tlsMatchBuf.data(), MAX_PER_CHUNK);
+                    if (found == 0) break;
+                    for (size_t k = 0; k < found; k++) {
+                        if (stopFlag.load()) return;
+                        if (!callback(cur + off + tlsMatchBuf[k])) {
+                            stopFlag.store(true);
+                            return;
+                        }
                     }
+                    if (found < MAX_PER_CHUNK) break;
+                    off += tlsMatchBuf[found - 1] + 1;
                 }
                 cur += std::min(CHUNK_SIZE, static_cast<size_t>(end - cur));
             }
@@ -250,7 +266,7 @@ std::vector<uintptr_t> SearchEngine::searchString(const SearchParams& params,
             if (match) out.push_back(base + i);
         }
     };
-    parallelScan(params, checker2, threadResults);
+    parallelScan(params, checker2, threadResults, nullptr, patLen2 - 1);
     return mergeThreadResults(threadResults);
 }
 
@@ -296,6 +312,6 @@ std::vector<uintptr_t> SearchEngine::searchStringUTF16(const SearchParams& param
             if (match) out.push_back(base + i);
         }
     };
-    parallelScan(params, checker3, threadResults3);
+    parallelScan(params, checker3, threadResults3, nullptr, patLen3 - 1);
     return mergeThreadResults(threadResults3);
 }
