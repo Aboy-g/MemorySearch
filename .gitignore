@@ -1,0 +1,4 @@
+# NDK 构建产物
+obj/
+libs/
+out/

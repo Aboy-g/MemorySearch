@@ -55,7 +55,6 @@ struct SearchParams {
 
     // 结果控制
     size_t maxResults = 0;                       // 0=无限制 (注意:超大结果集会OOM)
-    bool align = true;                           // 按类型大小对齐 (仅精确值搜索)
 
     // 反检测: 仅扫描常驻内存(RAM)页, 跳过已换出到 非驻留内存 的页。
     // 开启后扫描前会依据 /proc/pid/pagemap 的 PRESENT 位过滤区域,
@@ -726,7 +725,7 @@ static void parallelValueScan(const SearchParams& params, MemBase& mem,
             if (idx >= ranges.size()) break;
             const auto& range = ranges[idx];
             uintptr_t cur = range.start, end = range.end;
-            if (params.align) { uintptr_t rem = cur % typeSize; if (rem) cur += typeSize - rem; }
+            { uintptr_t rem = cur % typeSize; if (rem) cur += typeSize - rem; } // 按类型大小对齐 (等价 align=true)
             while (cur < end && !cancelled.load()) {
                 if (maxResults > 0 && totalResults.load() >= maxResults) break;
                 size_t toRead = std::min(CHUNK_SIZE + typeSize - 1, static_cast<size_t>(end - cur));
@@ -794,7 +793,7 @@ static void searchEqFast(const SearchParams& params, MemBase& mem,
         size_t n = os.search(buf, sz, mb.data(), MAX_M);
         for (size_t k = 0; k < n; k++) {
             uintptr_t addr = base + mb[k];
-            if (params.align && (addr % sizeof(T) != 0)) continue;
+            if (addr % sizeof(T) != 0) continue; // 仅保留类型对齐命中 (等价 align=true)
             T v; memcpy(&v, buf + mb[k], sizeof(T));
             out.push_back({addr, v});
         }
@@ -809,11 +808,11 @@ static void searchGeneric(const SearchParams& params, MemBase& mem,
                            std::vector<SearchResult<T>>& results,
                            const SearchEngine::ProgressCallback& progressCb,
                            SearchStats& stats) {
-    const size_t ts = sizeof(T), step = params.align ? ts : 1;
+    const size_t ts = sizeof(T);
     parallelValueScan<T>(params, mem, [&](uintptr_t base, const uint8_t* buf, size_t sz,
                            std::vector<SearchResult<T>>& out, std::atomic<size_t>& tres) {
         size_t limit = sz - ts + 1;
-        for (size_t off = 0; off < limit; off += step) {
+        for (size_t off = 0; off < limit; off += ts) { // 按类型大小步进 (等价 align=true)
             T v; memcpy(&v, buf + off, ts);
             if (judge(v)) { out.push_back({base + off, v}); tres.fetch_add(1, std::memory_order_relaxed); }
         }
