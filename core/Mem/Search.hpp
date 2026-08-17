@@ -398,6 +398,18 @@ public:
     std::vector<uintptr_t> scanPatternString(const SearchParams& params,
                                               const std::string& hexPattern);
 
+    // ── 通用字节搜索 (指针 + 大小) ─────────────────────
+    // 传入任意二进制数据直接搜索, 无需构造 vector 或 hex 字符串。
+    // mask 可为空: 非空时必须与 data 等长, mask 中 0x00 字节为通配符。
+    std::vector<uintptr_t> searchBytes(const SearchParams& params,
+                                       const void* data, size_t size,
+                                       const void* mask = nullptr);
+    std::vector<uintptr_t> searchBytes(const void* data, size_t size,
+                                       const void* mask = nullptr) {
+        SearchParams params;
+        return searchBytes(params, data, size, mask);
+    }
+
     // ── 异步扫描 (可提前终止) ──────────────────────────
     void searchPatternAsync(const SearchParams& params,
                             const std::string& hexPattern,

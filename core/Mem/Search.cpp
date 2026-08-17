@@ -65,34 +65,32 @@ std::vector<uintptr_t> SearchEngine::scanPatternString(const SearchParams& param
     std::vector<uint8_t> pattern, mask;
     if (!parseHexPattern(hexPattern, pattern, mask))
         return {};
-    return searchPattern(params, pattern, mask);
+    return searchBytes(params, pattern.data(), pattern.size(),
+                       mask.empty() ? nullptr : mask.data());
 }
 
 // ============================================================
-// 模式搜索 (BMH + parallelScan)
+// 通用字节搜索 (指针 + 大小, 可选通配 mask) — 核心实现
 // ============================================================
-std::vector<uintptr_t> SearchEngine::searchPattern(
-    const SearchParams& params,
-    const std::vector<uint8_t>& pattern,
-    const std::vector<uint8_t>& mask)
+std::vector<uintptr_t> SearchEngine::searchBytes(const SearchParams& params,
+                                                 const void* data, size_t size,
+                                                 const void* mask)
 {
-    if (pattern.empty()) return {};
-
-    std::vector<uint8_t> effectiveMask = mask;
-    if (effectiveMask.empty())
-        effectiveMask.resize(pattern.size(), 0xFF);
-    if (effectiveMask.size() != pattern.size())
-        throw std::invalid_argument("Mask size must equal pattern size");
+    if (!data || size == 0) return {};
+    const uint8_t* pat = static_cast<const uint8_t*>(data);
+    const uint8_t* msk = static_cast<const uint8_t*>(mask);
 
     bool hasWildcard = false;
-    for (uint8_t m : effectiveMask)
-        if (m == 0) { hasWildcard = true; break; }
+    if (msk) {
+        for (size_t i = 0; i < size; i++)
+            if (msk[i] == 0) { hasWildcard = true; break; }
+    }
 
     FastSearch::OptimizedPatternSearch optSearch;
-    if (hasWildcard)
-        optSearch.init(pattern.data(), effectiveMask.data(), pattern.size());
+    if (msk && hasWildcard)
+        optSearch.init(pat, msk, size);
     else
-        optSearch.init(pattern.data(), pattern.size());
+        optSearch.init(pat, size);
 
     const size_t MAX_PER_CHUNK = 131072;
     const size_t maxR = params.maxResults;
@@ -115,6 +113,21 @@ std::vector<uintptr_t> SearchEngine::searchPattern(
     auto results = mergeThreadResults(threadResults);
     if (maxR > 0 && results.size() > maxR) results.resize(maxR);
     return results;
+}
+
+// ============================================================
+// 模式搜索 — 委托 searchBytes
+// ============================================================
+std::vector<uintptr_t> SearchEngine::searchPattern(
+    const SearchParams& params,
+    const std::vector<uint8_t>& pattern,
+    const std::vector<uint8_t>& mask)
+{
+    if (pattern.empty()) return {};
+    if (!mask.empty() && mask.size() != pattern.size())
+        throw std::invalid_argument("Mask size must equal pattern size");
+    return searchBytes(params, pattern.data(), pattern.size(),
+                       mask.empty() ? nullptr : mask.data());
 }
 
 // ============================================================

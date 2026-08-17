@@ -104,6 +104,17 @@ static void runDemo(SearchEngine &search, Mem &mem) {
     auto wildAddrs = search.scanPatternString(params, "12 ?? 34");
     std::cout << "   找到 " << wildAddrs.size() << " 个地址\n";
 
+    // 7. 通用字节搜索 (指针 + 大小)
+    std::cout << "\n7. 通用字节搜索 searchBytes (原始指针 + 大小):\n";
+    int rawInt = 123456;                              // 任意类型的原始二进制
+    auto bytesAddrs = search.searchBytes(&rawInt, sizeof(rawInt));
+    std::cout << "   int 原始字节 找到 " << bytesAddrs.size() << " 个地址 (等价 search<int>)\n";
+
+    uint8_t wildPat[] = {0x12, 0x00, 0x34};
+    uint8_t wildMsk[] = {0xFF, 0x00, 0xFF};           // 中间字节通配
+    auto wild2 = search.searchBytes(wildPat, sizeof(wildPat), wildMsk);
+    std::cout << "   通配字节模式 找到 " << wild2.size() << " 个地址\n";
+
     std::cout << "\n========== 演示结束 ==========\n";
 }
 
